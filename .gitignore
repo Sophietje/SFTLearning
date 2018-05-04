@@ -2,6 +2,10 @@
 /BooleanAlgebras/target/
 /TestSVPA/target/
 /TestSVPA/*.dot
+out/
+*.dot
+*.png
+*.iml
 
 BooleanAlgebras/bin/test/TestCharTheory.class
 BooleanAlgebras/bin/theory/CharConstant.class
