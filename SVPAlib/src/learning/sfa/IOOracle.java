@@ -7,6 +7,8 @@ import java.util.Scanner;
 import org.sat4j.specs.TimeoutException;
 
 import automata.sfa.SFA;
+import theory.BooleanAlgebra;
+import theory.intervals.BoundedIntegerSolver;
 import theory.intervals.IntPred;
 
 public class IOOracle extends Oracle<IntPred, Integer> {
@@ -37,6 +39,15 @@ public class IOOracle extends Oracle<IntPred, Integer> {
 		System.out.println("Does your automaton accept " + w + " ? (y/n):");
 		char in = sc.nextLine().charAt(0);
 		return in == 'y';
+	}
+
+
+	public static void main(String[] args) throws TimeoutException {
+		BooleanAlgebra<IntPred, Integer> ba = new BoundedIntegerSolver(0,null);
+		Learner<IntPred, Integer> ell = new Learner<IntPred, Integer>();
+		Oracle<IntPred, Integer> o = new IOOracle();
+		SFA<IntPred, Integer> learned = ell.learn(o, ba);
+		learned.createDotFile("test.dot", "/Users/NW/Documents/Djungarian/SVPAlib/src/learning/sfa");
 	}
 
 }
