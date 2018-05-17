@@ -8,9 +8,7 @@ import learning.sfa.Oracle;
 import org.sat4j.specs.TimeoutException;
 
 import automata.sfa.SFA;
-import theory.BooleanAlgebra;
 import theory.characters.CharPred;
-import theory.intervals.IntPred;
 import theory.intervals.UnaryCharIntervalSolver;
 
 public class IOStringOracle extends Oracle<CharPred, Character> {
@@ -22,8 +20,7 @@ public class IOStringOracle extends Oracle<CharPred, Character> {
     }
 
     @Override
-    public List<Character> checkEquivalenceImpl(SFA<CharPred, Character> compareTo) throws TimeoutException {
-        List<Character> ret = new ArrayList<Character>();
+    public List<Character> checkEquivalenceImpl(SFA<CharPred, Character> compareTo) {
         System.out.println(compareTo);
         System.out.println("Is that your automaton? (y/n):");
         char in = sc.nextLine().charAt(0);
@@ -32,15 +29,13 @@ public class IOStringOracle extends Oracle<CharPred, Character> {
         System.out.println("Enter counterexample string a1,a2,a3... :");
         String cex = sc.nextLine();
         String[] parts = cex.split(",");
-        List<Character> chars = new ArrayList<Character>();
+        List<Character> chars = new ArrayList<>();
         for (String s : parts) {
             for (Character c : s.toCharArray()) {
                 chars.add(c);
             }
         }
-        for (Character c : chars)
-            ret.add(c);
-        return ret;
+        return chars;
     }
 
     @Override
@@ -52,12 +47,12 @@ public class IOStringOracle extends Oracle<CharPred, Character> {
 
     public static void main(String[] args) {
         UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
-        Learner<CharPred, Character> ell = new Learner<CharPred, Character>();
+        Learner<CharPred, Character> ell = new Learner<>();
         Oracle o = new IOStringOracle();
         SFA<CharPred, Character> learned = null;
         try {
             learned = ell.learn(o, ba);
-            learned.createDotFile("testStringOracle.dot", "/Users/NW/Documents/Djungarian/SVPAlib/src/learning/sfa");
+            learned.createDotFile("testStringOracle", "/Users/NW/Documents/Djungarian/SVPAlib/src/learning/sfa");
         } catch (TimeoutException e) {
             e.printStackTrace();
         }

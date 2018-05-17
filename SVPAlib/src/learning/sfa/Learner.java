@@ -23,34 +23,57 @@ import theory.BooleanAlgebra;
 public class Learner<P, S> {
 
 	public boolean debugOutput; //controls whether to write intermediary steps to System.out
-	
+
+	/**
+	 * Initialize learner
+	 * Sets debugging mode to false
+	 */
 	public Learner() {
 		this.debugOutput = false;
 	}
-	
+
+	/**
+	 * Initialize learner
+	 * @param debugOutput value indicating whether debugging mode should be on
+	 */
 	public Learner(boolean debugOutput) {
 		this.debugOutput = debugOutput;
 	}
-	
+
+	/**
+	 * Prints logging to standard output
+	 * @param heading heading that is printed
+	 * @param value value that is printed
+	 */
 	private void log(String heading, Object value) {
 		if (this.debugOutput) {
 			System.out.println("========" + heading + "========");
 			System.out.println(value);
 		}
 	}
-	
+
+	/**
+	 * Learns an automaton using o as an oracle with boolean algebra ba
+	 * @param o oracle
+	 * @param ba boolean algebra
+	 * @return learned automaton (SFA)
+	 * @throws TimeoutException
+	 */
 	public SFA<P, S> learn(Oracle<P, S> o, BooleanAlgebra<P, S> ba) throws TimeoutException {
+		// Initialize observation table
 		ObsTable table = new ObsTable(ba.generateWitness(ba.True()));
 		
 		SFA<P, S> conjecture = null;
 		List<S> cx = null;
 		
 		while (true) {
+			// Fill observation table
 			table.fill(o);
 			
 			//this.log("TBL after fill", table);
 
 			boolean consflag = true, closeflag = true;
+			// Repeat while the observation table is not closed and not consistent
 			do {
 				//make-consistent can add to E,
 				//so after it is run we need to
@@ -83,7 +106,8 @@ public class Learner<P, S> {
 			} while (consflag || closeflag);
 			
 			this.log("Obs Table", table);
-			
+
+			// Build hypothesis automaton
 			conjecture = table.buildSFA(ba);
 			//System.out.println("total");
 			conjecture = conjecture.mkTotal(ba);
@@ -95,8 +119,10 @@ public class Learner<P, S> {
 			//checkArgument(table.consistent(conjecture, ba));
 			//System.out.println("passed");
 
+			// Check equivalence of hypothesis to system under learning (SUL)
 			cx = o.checkEquivalence(conjecture);
 			if (cx == null) {
+				// Report statistics if hypothesis automaton is correct
 				this.log("statistics", 
 						"# equiv: " + o.getNumEquivalence() + 
 						"\n# mem: " + o.getNumMembership());
@@ -119,7 +145,12 @@ public class Learner<P, S> {
 		public List<List<S>> S, R, E, SUR;
 		public Map<List<S>, Boolean> f;
 		public S arbchar;
-		
+
+		/**
+		 * Initialize the observation table
+		 *
+		 * @param arbchar arbitrary element from the input language
+		 */
 		public ObsTable(S arbchar) {
 			S = new ArrayList<List<S>>();
 			R = new ArrayList<List<S>>();
@@ -127,16 +158,26 @@ public class Learner<P, S> {
 			E = new ArrayList<List<S>>();
 			f = new HashMap<List<S>, Boolean>();
 			this.arbchar = arbchar;
-			
+
+			// Add 'empty' / epsilon (S = {e})
 			S.add(new ArrayList<S>());
 			SUR.add(new ArrayList<S>());
 			List<S> r = new ArrayList<S>();
 			r.add(arbchar);
+			// Add a (R = {a})
 			R.add(r);
+			// S U R = {e} U {a} = {e, a}
 			SUR.add(r);
+			// Add 'empty' / epsilon (E = {e})
 			E.add(new ArrayList<S>());
 		}
-		
+
+		/**
+		 * Checks whether w is a (strict) prefix of we
+		 * @param w first word
+		 * @param we second word
+		 * @return true if w is a strict prefix of we
+		 */
 		//auxiliary method that checks whether
 		//w is a strict prefix of we
 		private boolean isPrefix(List<S> w, List<S> we) {
@@ -147,7 +188,13 @@ public class Learner<P, S> {
 					return false;
 			return true;
 		}
-		
+
+		/**
+		 * Returns the suffix of w and we
+		 * @param w first word
+		 * @param we second word
+		 * @return suffix of w and we
+		 */
 		//assumes isPrefix(w, we)
 		private List<S> getSuffix(List<S> w, List<S> we) {
 			List<S> suffix = new ArrayList<S>();
@@ -155,7 +202,16 @@ public class Learner<P, S> {
 				suffix.add(we.get(k));
 			return suffix;
 		}
-		
+
+		/**
+		 * Processes a counterexample which is given in the form [a, b, c, ...]
+		 *
+		 * To do when processing a counterexample:
+		 * - Add all prefixes of the counterexample in S
+		 *
+		 * TODO: Can be optimized (see back in black paper) by making sure to keep the table reduced
+		 * @param cx the counterexample that should be processed
+		 */
 		public void process(List<S> cx) {
 			List<List<S>> prefixes = new ArrayList<List<S>>();
 			for (int i = 1; i <= cx.size(); i++) {
@@ -173,6 +229,13 @@ public class Learner<P, S> {
 			}
 		}
 
+		/**
+		 * Returns whether the given automaton is consistent with the observation table
+		 * @param sfa automaton (SFA)
+		 * @param ba boolean algebra
+		 * @return True if automaton is consistent with observation table, else False
+		 * @throws TimeoutException
+		 */
 		//sanity check to verify a conjectured automaton
 		//is consistent with the observation table
 		public boolean consistent(SFA<P, S> sfa, BooleanAlgebra<P, S> ba) throws TimeoutException {
@@ -189,6 +252,12 @@ public class Learner<P, S> {
 			return true;
 		}
 
+		/**
+		 * Construct SFA from observation table
+		 * @param ba
+		 * @return
+		 * @throws TimeoutException
+		 */
 		public SFA<P, S> buildSFA(BooleanAlgebra<P, S> ba) throws TimeoutException {
 			//first build the evidence automaton's transition system
 			Map<List<Boolean>, Map<List<Boolean>, Set<S>>> trans;
@@ -204,6 +273,7 @@ public class Learner<P, S> {
 					if (wa.size() != w.size() + 1 || !isPrefix(w, wa))
 						continue;
 					S evid = wa.get(wa.size() - 1);
+					// Add the following transition: q_w ---a---> q_wa
 					trans.get(row(w)).get(row(wa)).add(evid);
 				}
 			}
@@ -219,13 +289,16 @@ public class Learner<P, S> {
 				ArrayList<P> sepPreds = ba.GetSeparatingPredicates(groups_arr, Long.MAX_VALUE);
 				checkArgument(sepPreds.size() == S.size());
 				for (int j = 0; j < sepPreds.size(); j++)
+					// Add the transition i---pred_j ---> j
 					moves.add(new SFAInputMove<P, S>(i, j, sepPreds.get(j)));
 			}
 			
 			//build and return the SFA
+			// q_0 is the initial state
 			Integer init = 0;
 			List<Integer> fin = new ArrayList<Integer>();
 			for (int i = 0; i < S.size(); i++) {
+				// Add state i to final states if f(i) = true
 				if (f.get(S.get(i)))
 					fin.add(i);
 			}
@@ -239,10 +312,21 @@ public class Learner<P, S> {
 			//return SFA.MkSFA(moves, init, fin, ba);
 		}
 
+		/**
+		 * Returns the row in the observation table corresponding to w
+		 * @param w
+		 * @return
+		 */
 		public List<Boolean> row(List<S> w) {
 			return row(w, null);
 		}
-		
+
+		/**
+		 * Returns the row in the observation table corresponding to w, while ignoring the characters in ignore
+		 * @param w
+		 * @param ignore
+		 * @return
+		 */
 		public List<Boolean> row(List<S> w, List<S> ignore) {
 			List<Boolean> ret = new ArrayList<Boolean>();
 			for(List<S> e : E) {
@@ -254,7 +338,12 @@ public class Learner<P, S> {
 			}
 			return ret;
 		}
-		
+
+		/**
+		 * Add the missing entries to the observation table
+		 * @param o oracle that returns the output given a word
+		 * @throws TimeoutException
+		 */
 		public void fill(Oracle<P, S> o) throws TimeoutException { 
 			for (List<S> w : SUR) {
 				for (List<S> e : E) {
@@ -265,7 +354,14 @@ public class Learner<P, S> {
 				}
 			}
 		}
-		
+
+		/**
+		 * Checks whether the table is closed
+		 *
+		 * An observation table is closed when:
+		 * - for all one-step extensions (t) of S, there should exist a row in S such that row(s) = row(t)
+		 * @return False if table is closed, true if it changes anything
+		 */
 		//returns true if makes a change, needs to be applied until returns false
 		public boolean close() {
 			Set<List<Boolean>> sigs = new HashSet<List<Boolean>>();
@@ -273,6 +369,7 @@ public class Learner<P, S> {
 				sigs.add(row(s));
 			List<S> best_r = null;
 			for (List<S> r : R) {
+				// If there is a row in R with no similar row in S, then the table is not closed!
 				if (!sigs.contains(row(r))) {
 					//for membership query efficiency,
 					//instead of just moving r to S, move the shortest r' with row(r) = row(r')
@@ -288,13 +385,17 @@ public class Learner<P, S> {
 					break;
 				}
 			}
+			// Table is closed since there was no row in R without a similar row in S
+			// Otherwise best_r would not be null
 			if (best_r == null)
 				return false;
 			
 			List<S> r = best_r;
+			//  Move row R (without a corresponding row in S) to S, remove from R
 			S.add(r);
 			R.remove(r);
-			
+
+			// Add all one-step extensions of r as rows (if not yet in the set of rows)
 			//handle evidence-closure
 			for (List<S> e : E) { 
 				List<S> re = new ArrayList<S>(r);
@@ -316,6 +417,7 @@ public class Learner<P, S> {
 					break;
 				}
 			}
+			// Add one step extension of r with an arbitrary character from the alphabet
 			if (!cont) {
 				List<S> ra = new ArrayList<S>(r);
 				ra.add(arbchar);
@@ -325,17 +427,26 @@ public class Learner<P, S> {
 			
 			return true;
 		}
-		
+
+		/**
+		 * Makes the observation table consistent
+		 *
+		 * An observation table is consistent when:
+		 * - for all s1, s2 in S: if row(s1) = row(s2) then the rows of all their one-step extensions should be the same
+		 * @return False if table is consistent, true if it changes anything
+		 */
 		//returns true if makes a change, needs to be applied until returns false
 		public boolean make_consistent() { 
 			for (int i = 0; i < SUR.size(); i++) {
 				for (int j = i + 1; j < SUR.size(); j++) {
 					List<S> w1 = SUR.get(i);
 					List<S> w2 = SUR.get(j);
+					// Rows are not equal so the implication is by default true, therefore we can skip this pair
 					if (!row(w1).equals(row(w2)))
 						continue;
 					Set<List<S>> cont1 = new HashSet<List<S>>();
 					Set<List<S>> cont2 = new HashSet<List<S>>();
+					// Make sets containing all one-step extensions
 					for (List<S> wa : SUR) {
 						if (isPrefix(w1, wa))
 							cont1.add(wa);
@@ -346,6 +457,7 @@ public class Learner<P, S> {
 						List<S> suffix1 = getSuffix(w1, w1a);
 						for (List<S> w2a : cont2) {
 							List<S> suffix2 = getSuffix(w2, w2a);
+							// We only want to consider the words with the same extension, thus move on to the next pair
 							if (!suffix1.equals(suffix2))
 								continue;
 							List<Boolean> r1 = row(w1a);
@@ -462,7 +574,11 @@ public class Learner<P, S> {
 			SUR.addAll(toAdd);
 			return toAdd.size() > 0;
 		}
-		
+
+		/**
+		 * Print observation table
+		 * @return observation table in string form
+		 */
 		@Override
 		public String toString() {
 			String ret = "E:";
