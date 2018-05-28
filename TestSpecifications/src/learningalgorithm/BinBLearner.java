@@ -75,8 +75,6 @@ public class BinBLearner<P, S> {
                 return conjecture;
             }
 
-            System.out.println("==================");
-            System.out.println("CURRENT STATE:\n "+table);
             // Process the found counterexample
             table.process(cx, o, ba);
         }
@@ -160,9 +158,15 @@ public class BinBLearner<P, S> {
             // TODO: Check implementation of this method
             // Find distinguishing string d
             if (cx.size() == 1) {
-                this.R.add(cx);
-                this.SUR.add(cx);
+                if (!SUR.contains(cx)) {
+                    this.S.add(cx);
+                    this.SUR.add(cx);
+                } else if (R.contains(cx)) {
+                    this.S.add(cx);
+                    this.R.remove(cx);
+                }
                 this.fill(o);
+                System.out.println(this);
             }
 
             int diff = cx.size();
@@ -170,6 +174,7 @@ public class BinBLearner<P, S> {
             boolean membershipAnswer;
             if (!f.containsKey(cx)) {
                 membershipAnswer = o.checkMembership(cx);
+                f.put(cx, membershipAnswer);
             } else {
                 membershipAnswer = f.get(cx);
             }
@@ -179,21 +184,24 @@ public class BinBLearner<P, S> {
             while((diff-same) != 1) {
                 int i = (diff + same) / 2;
                 List<S> accessString = runInHypothesis(o, ba, cx, i);
-                System.out.println("Access string is: "+accessString);
-                accessString.addAll(cx.subList(i, cx.size()));
-                System.out.println("Complete access string is: "+accessString);
-                System.out.println("========================");
-                System.out.println(this);
-                if (membershipAnswer != o.checkMembership(accessString)) {
+                List<S> toAdd = new ArrayList<>();
+                for (int j=i; j<cx.size(); j++) {
+                    toAdd.add(cx.get(j));
+                }
+                accessString.addAll(toAdd);
+                if (!f.containsKey(accessString)) {
+                    boolean accStringAnswer = o.checkMembership(accessString);
+                    f.put(accessString, accStringAnswer);
+                    System.out.println(this);
+                }
+                if (membershipAnswer != f.get(accessString)) {
                     diff = i;
                 } else {
                     same = i;
                 }
             }
-
             // Construct s_i0 b
             List<S> wrongTransition = runInHypothesis(o, ba, cx, diff-1);
-            System.out.println("wrongTransition is "+wrongTransition);
             wrongTransition.add(cx.get(diff-1));
 
             // Check whether s_i0 b == s_j mod W U {d} for some j ±= i_0 + 1
@@ -205,25 +213,41 @@ public class BinBLearner<P, S> {
                 SUR.add(wrongTransition);
             } else {
                 // Else, add d to W (E)
-                E.add(cx.subList(diff, cx.size()));
+                List<S> dist = new ArrayList<>();
+                for (int i=diff; i<cx.size(); i++) {
+                    dist.add(cx.get(i));
+                }
+                if (!E.contains(dist)) {
+                    E.add(dist);
+                }
+                for (List<S> c : this.S) {
+                    List<S> toAdd = new ArrayList<>();
+                    toAdd.addAll(c);
+                    toAdd.addAll(dist);
+                    System.out.println("Adding "+toAdd.toString()+" to SUR (added "+dist+" to E)");
+                    if (!SUR.contains(toAdd)) {
+                        SUR.add(toAdd);
+                        R.add(toAdd);
+                    }
+                }
             }
             fill(o);
+            System.out.println(this);
         }
 
         private List<S> runInHypothesis(Oracle<P, S> o, BooleanAlgebra<P, S> ba, List<S> cx, int i) throws TimeoutException {
-            System.out.println(this.toString());
+            this.fill(o);
             SFA<P, S> hypothesis = this.buildSFA(o, ba);
             hypothesis.mkTotal(ba);
 
             int state = hypothesis.getInitialState();
-            System.out.println("Initial state is: "+String.valueOf(state));
-            for (S c : cx.subList(0, i)) {
+            List<S> toSimulate = new ArrayList<>(cx.subList(0, i));
+            for (S c : toSimulate) {
                 boolean found = false;
                 for (SFAInputMove<P, S> trans : hypothesis.getInputMovesFrom(state)) {
                     if (ba.HasModel(trans.guard, c)) {
                         found = true;
                         state = trans.to;
-                        System.out.println("Moved to state: "+String.valueOf(state));
                         break;
                     }
                 }
@@ -236,33 +260,8 @@ public class BinBLearner<P, S> {
             // Zoek de corresponding row in S op en return deze
             // Ik zoek de access string voor "state" -> find row(state) = row(cx.subList(0,i))?
             // Then find row equal to row(cx.subList(0,i)) in S
-            return this.S.get(state);
-//            System.out.println("index i is: "+i);
-//            System.out.println("Counterexample: "+cx);
-//            System.out.println("cx[:i] is "+cx.subList(0, i));
-//
-//
-//            List<Boolean> rowInTable = row(cx.subList(0,i));
-////            if (rowInTable == null) {
-////                f.put(cx.subList(0,i), )
-////            }
-//            System.out.println("Corresponding row in S is: "+rowInTable);
-//            for (List<S> s : this.S) {
-//                System.out.println("row(s): "+s.toString());
-//                System.out.println("rowInTable: "+rowInTable.toString());
-//                if (row(s).equals(rowInTable)) {
-//                    return s;
-//                }
-//            }
-//            System.out.println("ERR: Could not find row in S corresponding to cx[:i]");
-//            if (cx.isEmpty()) {
-//                return new ArrayList<S>();
-//            } else if (cx.get(0) == null) {
-//                f.put(cx.subList(0, i), o.checkMembership(cx.subList(0, i)));
-//                return cx.subList(0, i);
-//            }
-//
-//            return null;
+            List<S> index = this.S.get(state);
+            return new ArrayList<>(index);
         }
 
         private SFA<P, S> buildSFA(Oracle<P, S> o, BooleanAlgebra<P, S> ba) throws TimeoutException {
@@ -287,6 +286,8 @@ public class BinBLearner<P, S> {
                         continue;
                     S evid = to.get(to.size() - 1);
                     // Add the following transition: q_from ---evid---> q_to
+                    System.out.println("transitions "+transitions);
+                    System.out.println("from "+from+ " to "+to+" with evid "+evid);
                     transitions.get(row(from)).get(row(to)).add(evid);
                 }
             }
@@ -301,9 +302,11 @@ public class BinBLearner<P, S> {
                 }
                 ArrayList<P> sepPreds = ba.GetSeparatingPredicates(groups_arr, Long.MAX_VALUE);
                 checkArgument(sepPreds.size() == S.size());
-                for (int j = 0; j < sepPreds.size(); j++)
+                for (int j = 0; j < sepPreds.size(); j++) {
                     // Add the transition i---pred_j ---> j
                     moves.add(new SFAInputMove<P, S>(i, j, sepPreds.get(j)));
+                }
+
             }
 
             //build and return the SFA
@@ -311,15 +314,14 @@ public class BinBLearner<P, S> {
             Integer init = 0;
             List<Integer> fin = new ArrayList<Integer>();
             for (int i = 0; i < S.size(); i++) {
-                // Add state i to final states if f(i) = true
-                if (f.get(S.get(i)))
-                    fin.add(i);
+                for (List<S> e : this.E) {
+                    // Add state i to final states if f(i) = true
+                    if (f.get(S.get(i))) {
+                        fin.add(i);
+                    }
+                }
             }
-            //System.out.println("SFAmoves:" + moves);
-            //System.out.println("init:" + init + "\nfin:" + fin);
-            //System.out.println("building");
             SFA ret = SFA.MkSFA(moves, init, fin, ba);
-            //System.out.println("returning");
             return ret;
 
             //return SFA.MkSFA(moves, init, fin, ba);
@@ -330,11 +332,13 @@ public class BinBLearner<P, S> {
                 for (List<S> e : E) {
                     List<S> we = new ArrayList<S>(w);
                     we.addAll(e);
-                    if (!f.containsKey(we)) {
-                        f.put(we, o.checkMembership(we));
+                    if (!f.containsKey(we) || f.get(we) == null) {
+                        boolean value = o.checkMembership(we);
+                        f.put(we, value);
                     }
                 }
             }
+            System.out.println(this);
         }
 
         /**

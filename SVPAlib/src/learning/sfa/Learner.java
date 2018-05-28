@@ -135,7 +135,6 @@ public class Learner<P, S> {
 			table.process(cx);
 			
 			//this.log("TBLpostCX", table);
-
 			//Scanner scanner = new Scanner(System.in);
 			//scanner.nextLine();
 		}
@@ -227,6 +226,7 @@ public class Learner<P, S> {
 					SUR.add(p);
 				}
 			}
+			System.out.println(this);
 		}
 
 		/**
