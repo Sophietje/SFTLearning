@@ -1,17 +1,18 @@
 package learningalgorithm;
 
-import automata.sfa.SFA;
-import automata.sfa.SFAInputMove;
-import automata.sfa.SFAMove;
-import learning.sfa.Oracle;
 import org.sat4j.specs.TimeoutException;
-import theory.BooleanAlgebra;
+import theory.BooleanAlgebraSubst;
+import theory.characters.TermInterface;
+import transducers.sft.SFT;
+import transducers.sft.SFTInputMove;
+import transducers.sft.SFTMove;
 
 import java.util.*;
+import java.util.concurrent.Callable;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-public class BinBLearner<P, S> {
+public class BinBSFTLearner<P, F extends TermInterface, S> {
 
     public boolean debugOutput;
 
@@ -19,7 +20,7 @@ public class BinBLearner<P, S> {
      * Initialize learner
      * Sets debugging mode to false
      */
-    public BinBLearner() {
+    public BinBSFTLearner() {
         this.debugOutput = false;
     }
 
@@ -27,7 +28,7 @@ public class BinBLearner<P, S> {
      * Initialize learner
      * @param debugOutput value indicating whether debugging mode should be on
      */
-    public BinBLearner(boolean debugOutput) {
+    public BinBSFTLearner(boolean debugOutput) {
         this.debugOutput = debugOutput;
     }
 
@@ -43,10 +44,10 @@ public class BinBLearner<P, S> {
         }
     }
 
-    public SFA<P, S> learn(Oracle<P, S> o, BooleanAlgebra<P, S> ba) throws TimeoutException {
+    public SFT<P, F, S> learn(SymbolicOracle<P, F, S> o, BooleanAlgebraSubst<P, F, S> ba) throws TimeoutException {
         // Initialize variables: table, conjecture, cx (counterexample)
         ObsTable table = new ObsTable(ba.generateWitness(ba.True()));
-        SFA<P, S> conjecture = null;
+        SFT<P, F, S> conjecture = null;
         List<S> cx = null;
 
         // While no equivalent hypothesis automaton has been found
@@ -66,8 +67,7 @@ public class BinBLearner<P, S> {
 
             // Construct hypothesis
             table.fill(o);
-            conjecture = table.buildSFA(o, ba);
-            conjecture = conjecture.mkTotal(ba);
+            conjecture = table.buildSFT(o, ba);
 
             // Check equivalence of hypothesis automaton and system under learning (SUL)
             cx = o.checkEquivalence(conjecture);
@@ -85,7 +85,7 @@ public class BinBLearner<P, S> {
      */
     private class ObsTable {
         public List<List<S>> S, R, E, SUR;
-        public Map<List<S>, Boolean> f;
+        public Map<List<S>, List<S>> f;
         public S arbchar;
 
         /**
@@ -97,7 +97,7 @@ public class BinBLearner<P, S> {
             R = new ArrayList<List<S>>();
             SUR = new ArrayList<List<S>>();
             E = new ArrayList<List<S>>();
-            f = new HashMap<List<S>, Boolean>();
+            f = new HashMap<List<S>, List<S>>();
             this.arbchar = arbchar;
 
             // Add 'empty' / epsilon (S = {e})
@@ -145,7 +145,7 @@ public class BinBLearner<P, S> {
             return suffix;
         }
 
-        public void addToTable(List<S> cx, Oracle o) throws TimeoutException {
+        public void addToTable(List<S> cx, SymbolicOracle o) throws TimeoutException {
             this.fill(o);
             if (!SUR.contains(cx)) {
                 this.SUR.add(cx);
@@ -190,7 +190,7 @@ public class BinBLearner<P, S> {
          * TODO: Can be optimized (see back in black paper) by making sure to keep the table reduced
          * @param cx the counterexample that should be processed
          */
-        public void process(List<S> cx, Oracle<P, S> o, BooleanAlgebra<P, S> ba) throws TimeoutException {
+        public void process(List<S> cx, SymbolicOracle o, BooleanAlgebraSubst ba) throws TimeoutException {
             // TODO: Check implementation of this method
             // Find distinguishing string d
             if (cx.size() == 1) {
@@ -200,7 +200,7 @@ public class BinBLearner<P, S> {
 
             int diff = cx.size();
             int same = 0;
-            boolean membershipAnswer;
+            List<S> membershipAnswer;
             if (!f.containsKey(cx)) {
                 membershipAnswer = o.checkMembership(cx);
                 f.put(cx, membershipAnswer);
@@ -220,7 +220,7 @@ public class BinBLearner<P, S> {
                 }
                 accessString.addAll(toAdd);
                 if (!f.containsKey(accessString)) {
-                    boolean accStringAnswer = o.checkMembership(accessString);
+                    List<S> accStringAnswer = o.checkMembership(accessString);
                     f.put(accessString, accStringAnswer);
                     addToTable(accessString, o);
                     System.out.println(this);
@@ -238,7 +238,6 @@ public class BinBLearner<P, S> {
             // Check whether s_i0 b == s_j mod W U {d} for some j ±= i_0 + 1
             // b is a character from the input language
             // d is the counterexample
-            System.out.println("Wrong Transition is "+wrongTransition);
             if (!SUR.contains(wrongTransition)) {
                 // If so, then add s_i0 b to ^ (R)
                 R.add(wrongTransition);
@@ -256,7 +255,6 @@ public class BinBLearner<P, S> {
                     List<S> toAdd = new ArrayList<>();
                     toAdd.addAll(c);
                     toAdd.addAll(dist);
-                    System.out.println("Adding "+toAdd.toString()+" to SUR (added "+dist+" to E)");
                     if (!SUR.contains(toAdd)) {
                         SUR.add(toAdd);
                         R.add(toAdd);
@@ -267,20 +265,16 @@ public class BinBLearner<P, S> {
             System.out.println(this);
         }
 
-        private List<S> runInHypothesis(Oracle<P, S> o, BooleanAlgebra<P, S> ba, List<S> cx, int i) throws TimeoutException {
+        private List<S> runInHypothesis(SymbolicOracle o, BooleanAlgebraSubst ba, List<S> cx, int i) throws TimeoutException {
             this.fill(o);
-            SFA<P, S> hypothesis = this.buildSFA(o, ba);
-            hypothesis.mkTotal(ba);
+            SFT<P, F, S> hypothesis = this.buildSFT(o, ba);
 
             int state = hypothesis.getInitialState();
             System.out.println(hypothesis.toString());
             List<S> toSimulate = new ArrayList<>(cx.subList(0, i));
-            System.out.println("toSimulate is "+toSimulate);
             for (S c : toSimulate) {
                 boolean found = false;
-                System.out.println("Number of input moves: "+hypothesis.getInputMovesFrom(state).size());
-                for (SFAInputMove<P, S> trans : hypothesis.getInputMovesFrom(state)) {
-                    System.out.println("Is the guard ("+trans.guard+") satisfied by "+c+"?");
+                for (SFTInputMove<P, F, S> trans : hypothesis.getInputMovesFrom(state)) {
                     if (ba.HasModel(trans.guard, c)) {
                         found = true;
                         state = trans.to;
@@ -288,6 +282,7 @@ public class BinBLearner<P, S> {
                     }
                 }
                 if (!found) {
+                    // TODO: Vind cases waarin dit gebeurt en go fix!
                     System.out.println("AAAH stuk: kon geen matchende transitie vinden");
                 }
             }
@@ -298,17 +293,18 @@ public class BinBLearner<P, S> {
             // Then find row equal to row(cx.subList(0,i)) in S
             List<S> index = this.S.get(state);
             return new ArrayList<>(index);
+//            return hypothesis.outputOn(new ArrayList<>(cx.subList(0, i)), ba);
         }
 
-        private SFA<P, S> buildSFA(Oracle<P, S> o, BooleanAlgebra<P, S> ba) throws TimeoutException {
+        private SFT<P, F, S> buildSFT(SymbolicOracle o, BooleanAlgebraSubst ba) throws TimeoutException {
             // Define a state for each s in S
             // Set initial state to q_epsilon
             // Make state final if T(s, epsilon) = 1
             // Make transitions, guard(q_s) should return pair (g, q)
             // which means that we add the transitions q_s --- g ---> q
-            Map<List<Boolean>, Map<List<Boolean>, Set<S>>> transitions = new HashMap<>();
+            Map<List<List<S>>, Map<List<List<S>>, Set<S>>> transitions = new HashMap<>();
             for (List<S> from : S) {
-                Map<List<Boolean>, Set<S>> temp = new HashMap<>();
+                Map<List<List<S>>, Set<S>> temp = new HashMap<>();
                 for (List<S> to : S) {
                     temp.put(row(to), new HashSet<>());
                 }
@@ -322,25 +318,25 @@ public class BinBLearner<P, S> {
                         continue;
                     S evid = to.get(to.size() - 1);
                     // Add the following transition: q_from ---evid---> q_to
-                    System.out.println("transitions "+transitions);
-                    System.out.println("from "+from+ " to "+to+" with evid "+evid);
                     transitions.get(row(from)).get(row(to)).add(evid);
                 }
             }
 
             //now generalize the evidence into predicates
-            List<SFAMove<P, S>> moves = new ArrayList<SFAMove<P, S>>();
+            List<SFTMove<P, F, S>> moves = new ArrayList<>();
             for (int i = 0; i < S.size(); i++) {
-                List<Boolean> sb = row(S.get(i));
-                ArrayList<Collection<S>> groups_arr = new ArrayList<Collection<S>>();
+                List<List<S>> sb = row(S.get(i));
+                ArrayList<Collection<S>> groups_arr = new ArrayList<>();
                 for (List<S> sp : S) {
                     groups_arr.add(transitions.get(sb).get(row(sp)));
                 }
-                ArrayList<P> sepPreds = ba.GetSeparatingPredicates(groups_arr, Long.MAX_VALUE);
-                checkArgument(sepPreds.size() == S.size());
-                for (int j = 0; j < sepPreds.size(); j++) {
+                LinkedHashMap<P, List<F>> sepPreds = ba.getSeparatingPredicatesAndTermFunctions(groups_arr, Long.MAX_VALUE);
+//                checkArgument(sepPreds.size() == S.size());
+                int index = 0;
+                for (P key : sepPreds.keySet()) {
                     // Add the transition i---pred_j ---> j
-                    moves.add(new SFAInputMove<P, S>(i, j, sepPreds.get(j)));
+                    moves.add(new SFTInputMove<>(i, index, key, sepPreds.get(key)));
+                    index++;
                 }
 
             }
@@ -348,28 +344,25 @@ public class BinBLearner<P, S> {
             //build and return the SFA
             // q_0 is the initial state
             Integer init = 0;
-            List<Integer> fin = new ArrayList<Integer>();
+            HashMap<Integer, Set<List<S>>> fin = new HashMap<>();
             for (int i = 0; i < S.size(); i++) {
-                for (List<S> e : this.E) {
-                    // Add state i to final states if f(i) = true
-                    if (f.get(S.get(i))) {
-                        fin.add(i);
-                    }
-                }
+                // Add state i to final states if f(i) = true
+                // TODO: For now we assume that all states are accepting
+                fin.put(i, new HashSet<>());
             }
-            SFA ret = SFA.MkSFA(moves, init, fin, ba);
+            SFT ret = SFT.MkSFT(moves, init, fin, ba);
             return ret;
 
             //return SFA.MkSFA(moves, init, fin, ba);
         }
 
-        private void fill(Oracle<P, S> o) throws TimeoutException {
+        private void fill(SymbolicOracle o) throws TimeoutException {
             for (List<S> w : SUR) {
                 for (List<S> e : E) {
                     List<S> we = new ArrayList<S>(w);
                     we.addAll(e);
                     if (!f.containsKey(we) || f.get(we) == null) {
-                        boolean value = o.checkMembership(we);
+                        List<S> value = o.checkMembership(we);
                         f.put(we, value);
                     }
                 }
@@ -383,7 +376,7 @@ public class BinBLearner<P, S> {
          * @return False if the table is closed, true if the table was changed
          */
         private boolean close() {
-            Set<List<Boolean>> rowsS = new HashSet<List<Boolean>>();
+            Set<List<List<S>>> rowsS = new HashSet<>();
             List<S> best_r = null;
 
             for (List<S> s : this.S) {
@@ -391,7 +384,7 @@ public class BinBLearner<P, S> {
                 rowsS.add(row(s));
             }
 
-            Set<List<Boolean>> rowsR = new HashSet<>();
+            Set<List<List<S>>> rowsR = new HashSet<>();
             for (List<S> r : this.R) {
                 // Check whether there is a row in R that is not in S
                 if (!rowsS.contains(row(r))) {
@@ -447,7 +440,7 @@ public class BinBLearner<P, S> {
          * @param w
          * @return
          */
-        public List<Boolean> row(List<S> w) {
+        public List<List<S>> row(List<S> w) {
             return row(w, null);
         }
 
@@ -457,8 +450,8 @@ public class BinBLearner<P, S> {
          * @param ignore
          * @return
          */
-        public List<Boolean> row(List<S> w, List<S> ignore) {
-            List<Boolean> ret = new ArrayList<Boolean>();
+        public List<List<S>> row(List<S> w, List<S> ignore) {
+            List<List<S>> ret = new ArrayList<>();
             for(List<S> e : E) {
                 if (ignore != null && ignore.equals(e))
                     continue;
@@ -479,8 +472,11 @@ public class BinBLearner<P, S> {
                     List<S> we = new ArrayList<S>(w);
                     we.addAll(e);
                     if (f.containsKey(we)) {
-                        if (f.get(we)) ret += " +";
-                        else ret += " -";
+                        if (f.get(we).isEmpty()) {
+                            ret += "[]";
+                        } else {
+                            ret += f.get(we);
+                        }
                     }
                     else ret += "  ";
                 }
@@ -493,8 +489,11 @@ public class BinBLearner<P, S> {
                     List<S> we = new ArrayList<S>(w);
                     we.addAll(e);
                     if (f.containsKey(we)) {
-                        if (f.get(we)) ret += " +";
-                        else ret += " -";
+                        if (f.get(we).isEmpty()) {
+                            ret += "[]";
+                        } else {
+                            ret += f.get(we);
+                        }
                     }
                     else ret += "  ";
                 }

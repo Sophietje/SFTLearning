@@ -161,12 +161,12 @@ public class Learner<P, S> {
 			// Add 'empty' / epsilon (S = {e})
 			S.add(new ArrayList<S>());
 			SUR.add(new ArrayList<S>());
-			List<S> r = new ArrayList<S>();
-			r.add(arbchar);
+//			List<S> r = new ArrayList<S>();
+//			r.add(arbchar);
 			// Add a (R = {a})
-			R.add(r);
+//			R.add(r);
 			// S U R = {e} U {a} = {e, a}
-			SUR.add(r);
+//			SUR.add(r);
 			// Add 'empty' / epsilon (E = {e})
 			E.add(new ArrayList<S>());
 		}

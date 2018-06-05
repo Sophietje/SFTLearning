@@ -25,6 +25,7 @@ import automata.sfa.SFAMove;
 import automata.sfa.SFAEpsilon;
 import automata.sfa.SFAInputMove;
 import theory.BooleanAlgebraSubst;
+import theory.characters.TermInterface;
 import utilities.Pair;
 
 
@@ -40,7 +41,7 @@ import utilities.Pair;
  * @param <S>
  *			The domain of the Boolean algebra
  */
-public class SFT<P, F, S> extends Automaton<P, S> {
+public class SFT<P, F extends TermInterface, S> extends Automaton<P, S> {
 
 	// SFT properties
 	protected Collection<Integer> states;
@@ -65,12 +66,12 @@ public class SFT<P, F, S> extends Automaton<P, S> {
 
 	protected SFT() {
 		super();
-		states = new HashSet<Integer>();
-		transitionsFrom = new HashMap<Integer, Collection<SFTInputMove<P, F, S>>>();
-		transitionsTo = new HashMap<Integer, Collection<SFTInputMove<P, F, S>>>();
-		epsTransitionsFrom = new HashMap<Integer, Collection<SFTEpsilon<P, F, S>>>();
-		epsTransitionsTo = new HashMap<Integer, Collection<SFTEpsilon<P, F, S>>>();
-		finalStatesAndTails = new HashMap<Integer, Set<List<S>>>();
+		states = new HashSet<>();
+		transitionsFrom = new HashMap<>();
+		transitionsTo = new HashMap<>();
+		epsTransitionsFrom = new HashMap<>();
+		epsTransitionsTo = new HashMap<>();
+		finalStatesAndTails = new HashMap<>();
 		maxStateId = 0;
 		initialState = 0;
 	}
@@ -79,7 +80,7 @@ public class SFT<P, F, S> extends Automaton<P, S> {
 	* Create a SFT (removes unreachable states)
 	* Page 3, left column, the last 4 lines, definition 2
 	*/
-	public static <P, F, S> SFT<P, F, S> MkSFT(Collection<SFTMove<P, F, S>> transitions, Integer initialState,
+	public static <P, F extends TermInterface, S> SFT<P, F, S> MkSFT(Collection<SFTMove<P, F, S>> transitions, Integer initialState,
 											   Map<Integer, Set<List<S>>> finalStatesAndTails,
 													 BooleanAlgebraSubst<P, F, S> ba) {
 		SFT<P, F, S> aut = new SFT<P, F, S>();
@@ -101,7 +102,39 @@ public class SFT<P, F, S> extends Automaton<P, S> {
 		aut.states = new HashSet<Integer>();
 		aut.states.add(initialState);
 		aut.states.addAll(finalStatesAndTails.keySet());
-		
+
+		try {
+			for (SFTMove<P, F, S> t : transitions)
+				aut.addTransition(t, ba, false);
+			return aut;
+		} catch (TimeoutException toe) {
+			return null;
+		}
+	}
+
+	public static <P, F extends TermInterface, S> SFT<P, F, S> MkSFT(List<SFTMove<P, F, S>> transitions, Integer initialState,
+															 Map<Integer, Set<List<S>>> finalStatesAndTails,
+															 BooleanAlgebraSubst<P, F, S> ba) {
+		SFT<P, F, S> aut = new SFT<>();
+
+		// Initialize state set
+		aut.initialState = initialState;
+
+		for (Integer state: finalStatesAndTails.keySet()) {
+			Set<List<S>> tails = new HashSet<>();
+			for (List<S> tail: finalStatesAndTails.get(state)) {
+				if (tail.size() != 0) // remove the empty tail which is just an empty List<S> for brevity
+					tails.add(tail);
+			}
+			aut.finalStatesAndTails.put(state, tails);
+		}
+		// Now all tails are not empty so that if a final state <code>state</code> does not have any tails, the size of
+		// finalStatesAndTails.get(state) must be 0.
+
+		aut.states = new HashSet<>();
+		aut.states.add(initialState);
+		aut.states.addAll(finalStatesAndTails.keySet());
+
 		try {
 			for (SFTMove<P, F, S> t : transitions)
 				aut.addTransition(t, ba, false);
@@ -114,8 +147,8 @@ public class SFT<P, F, S> extends Automaton<P, S> {
 	/**
 	 * Returns the empty SFT
 	 */
-	public static <P, F, S> SFT<P, F, S> getEmptySFT(BooleanAlgebraSubst<P, F, S> ba) {
-		SFT<P, F, S> aut = new SFT<P, F, S>();
+	public static <P, F extends TermInterface, S> SFT<P, F, S> getEmptySFT(BooleanAlgebraSubst<P, F, S> ba) {
+		SFT<P, F, S> aut = new SFT<>();
 		aut.states = new HashSet<Integer>();
 		aut.states.add(0);
 		aut.initialState = 0;
@@ -138,7 +171,7 @@ public class SFT<P, F, S> extends Automaton<P, S> {
 	 * @return one output sequence, null if undefined
 	 * @throws TimeoutException
 	 */
-	public static <P, F, S> List<S> outputOn(SFT<P, F, S> sftWithEps, List<S> input,
+	public static <P, F extends TermInterface, S> List<S> outputOn(SFT<P, F, S> sftWithEps, List<S> input,
 												 BooleanAlgebraSubst<P, F, S> ba) throws TimeoutException {
 
 		// codes for nondeterministic but single-valued symbolic finite transducers
@@ -158,7 +191,7 @@ public class SFT<P, F, S> extends Automaton<P, S> {
 	}
 
 	// use backtrack method to get all possible outputs
-	private static <P, F, S> void backtrack(List<List<S>> outputs, List<S> tempList, SFT<P, F, S> sft,
+	private static <P, F extends TermInterface, S> void backtrack(List<List<S>> outputs, List<S> tempList, SFT<P, F, S> sft,
 											Integer currentState, List<S> input, int position,
 											BooleanAlgebraSubst<P, F, S> ba) throws TimeoutException {
 
@@ -211,13 +244,13 @@ public class SFT<P, F, S> extends Automaton<P, S> {
 	 *
 	 * @throws TimeoutException
 	 */
-	public static <P, F, S> SFT<P, F, S> compose(SFT<P, F, S> sft1withEps, SFT<P, F, S> sft2withEps,
+	public static <P, F extends TermInterface, S> SFT<P, F, S> compose(SFT<P, F, S> sft1withEps, SFT<P, F, S> sft2withEps,
 													   BooleanAlgebraSubst<P, F, S> ba) throws TimeoutException {
 		// Remove epsilons
 		SFT<P, F, S> sft1 = sft1withEps.removeEpsilonMoves(ba);
 		SFT<P, F, S> sft2 = sft2withEps.removeEpsilonMoves(ba);
 
-		Collection<SFTMove<P, F, S>> transitions = new ArrayList<SFTMove<P, F, S>>();
+		Collection<SFTMove<P, F, S>> transitions = new ArrayList<>();
 		Integer initialState;
 		Map<Integer, Set<List<S>>> sft1FinalStatesAndTails = new HashMap<Integer, Set<List<S>>>(sft1.getFinalStatesAndTails());
 		Map<Integer, Set<List<S>>> sft2FinalStatesAndTails = new HashMap<Integer, Set<List<S>>>(sft2.getFinalStatesAndTails());
@@ -322,7 +355,7 @@ public class SFT<P, F, S> extends Automaton<P, S> {
 						Pair<Integer, Integer> nextState = new Pair<Integer, Integer>(t1.to, currState.second);
 						int nextStateId = getStateId(nextState, reached, toVisit);
 
-						SFTInputMove<P, F, S> newTrans = new SFTInputMove<P, F, S>(currStateId, nextStateId,
+						SFTInputMove<P, F, S> newTrans = new SFTInputMove<>(currStateId, nextStateId,
 								t1.guard, new LinkedList<F>());
 
 						transitions.add(newTrans);
@@ -345,7 +378,7 @@ public class SFT<P, F, S> extends Automaton<P, S> {
 	/**
 	 * return an equivalent copy without epsilon moves
 	 */
-	protected static <P, F, S> SFT<P, F, S> removeEpsilonMovesFrom(SFT<P, F, S> sft,
+	protected static <P, F extends TermInterface, S> SFT<P, F, S> removeEpsilonMovesFrom(SFT<P, F, S> sft,
 																		 BooleanAlgebraSubst<P, F, S> ba) {
 
 		if (sft.isEpsilonFree)
@@ -383,7 +416,7 @@ public class SFT<P, F, S> extends Automaton<P, S> {
 				}
 			for (Integer nextState: epsilonClosureAndPath.keySet())
 				if (!nextState.equals(state)) {
-					List<F> outputFuncAlongPath = new ArrayList<F>();
+					List<F> outputFuncAlongPath = new ArrayList<>();
 					for (SFTEpsilon<P, F, S> transition: epsilonClosureAndPath.get(nextState)) {
 						for (S output: transition.outputs)
 							outputFuncAlongPath.add(ba.MkFuncConst(output));
@@ -391,7 +424,7 @@ public class SFT<P, F, S> extends Automaton<P, S> {
 					for (SFTInputMove<P, F, S> nextInputMove: sft.getInputMovesFrom(nextState)) {
 						List<F> combinedOutputFunctions = new ArrayList<F>(outputFuncAlongPath);
 						combinedOutputFunctions.addAll(nextInputMove.outputFunctions);
-						transitions.add(new SFTInputMove<P, F, S>(state, nextInputMove.to, nextInputMove.guard, combinedOutputFunctions));
+						transitions.add(new SFTInputMove<>(state, nextInputMove.to, nextInputMove.guard, combinedOutputFunctions));
 					}
 				}
 		}
@@ -409,8 +442,8 @@ public class SFT<P, F, S> extends Automaton<P, S> {
 	 * @param sft symbolic finite transducer
 	 * @param currentState the start point
 	 */
-	private static <P, F, S> Map<Integer, List<SFTEpsilon<P, F, S>>> getSFTEpsClosureAndPath(SFT<P, F, S> sft, Integer currentState) {
-		Map<Integer, List<SFTEpsilon<P, F, S>>> epsilonClosureAndPath = new HashMap<Integer, List<SFTEpsilon<P, F, S>>>();
+	private static <P, F extends TermInterface, S> Map<Integer, List<SFTEpsilon<P, F, S>>> getSFTEpsClosureAndPath(SFT<P, F, S> sft, Integer currentState) {
+		Map<Integer, List<SFTEpsilon<P, F, S>>> epsilonClosureAndPath = new HashMap<>();
 
 		Collection<Integer> reached = new HashSet<Integer>(currentState);
 		LinkedList<Integer> toVisit = new LinkedList<Integer>();
@@ -446,7 +479,7 @@ public class SFT<P, F, S> extends Automaton<P, S> {
 	 * @param sft symbolic finite transducer
 	 * @param currentState the start point
 	 */
-	private static <P, F, S> Collection<Integer> getSFTEpsClosure(SFT<P, F, S> sft, Integer currentState) {
+	private static <P, F extends TermInterface, S> Collection<Integer> getSFTEpsClosure(SFT<P, F, S> sft, Integer currentState) {
 		Collection<Integer> epsilonClosure = new HashSet<Integer>();
 
 		Collection<Integer> reached = new HashSet<Integer>(currentState);
@@ -483,10 +516,10 @@ public class SFT<P, F, S> extends Automaton<P, S> {
 	 * @param steps the number of steps, which should be a natural number
 	 * @return
 	 */
-	private static <P, F, S> List<List<SFTMove<P, F, S>>> possibleTransitionChains(SFT<P, F, S> sft, Integer startState, int steps) {
-		List<List<SFTMove<P, F, S>>> chains = new ArrayList<List<SFTMove<P, F, S>>>();
+	private static <P, F extends TermInterface, S> List<List<SFTMove<P, F, S>>> possibleTransitionChains(SFT<P, F, S> sft, Integer startState, int steps) {
+		List<List<SFTMove<P, F, S>>> chains = new ArrayList<>();
 		for (SFTMove<P, F, S> initialTransition: sft.getInputMovesFrom(startState)) {
-			List<SFTMove<P, F, S>> tempList = new LinkedList<SFTMove<P, F, S>>();
+			List<SFTMove<P, F, S>> tempList = new LinkedList<>();
 			tempList.add(initialTransition);
 			backtrack(chains, tempList, sft, steps - 1);
 		}
@@ -494,7 +527,7 @@ public class SFT<P, F, S> extends Automaton<P, S> {
 	}
 
 	// use backtrack method to get all possible transition chains
-	private static <P, F, S> void backtrack(List<List<SFTMove<P, F, S>>> chains, List<SFTMove<P, F, S>> tempList, SFT<P, F, S> sft, int remainSteps) {
+	private static <P, F extends TermInterface, S> void backtrack(List<List<SFTMove<P, F, S>>> chains, List<SFTMove<P, F, S>> tempList, SFT<P, F, S> sft, int remainSteps) {
 		if (remainSteps < 0)
 			return; // no solution
 		else if (remainSteps == 0)
@@ -521,7 +554,7 @@ public class SFT<P, F, S> extends Automaton<P, S> {
 	 * @param sft1withEps symbolic finite transducer 1 who may have epsilon transitions
 	 * @param sft2withEps symbolic finite transducer 2 who may have epsilon transitions
 	 */
-	public static <P, F, S> boolean decide1equality(SFT<P, F, S> sft1withEps,
+	public static <P, F extends TermInterface, S> boolean decide1equality(SFT<P, F, S> sft1withEps,
 													SFT<P, F, S> sft2withEps,
 													BooleanAlgebraSubst<P, F, S> ba) throws TimeoutException {
 		// Figure 3 line 1: C := A  \times B;
@@ -573,8 +606,8 @@ public class SFT<P, F, S> extends Automaton<P, S> {
 					if (tails1.size() > 1 || tails2.size() > 1) // if any final state in any SFT has many tails, their
 						// outputs are uncertain, so 2 SFTs cannot be 1-equality
 						return false;
-					List<F> finalU = new ArrayList<F>(u);
-					List<F> finalV = new ArrayList<F>(v);
+					List<F> finalU = new ArrayList<>(u);
+					List<F> finalV = new ArrayList<>(v);
 					for (List<S> tail: tails1)
 						for (S element: tail)
 							finalU.add(ba.MkFuncConst(element));
@@ -597,14 +630,14 @@ public class SFT<P, F, S> extends Automaton<P, S> {
 							return false;
 
 					// Figure 3 line 9: w := [u_{|v|,\dots,u_{|u|-1}}];
-					List<F> w = new ArrayList<F>();
+					List<F> w = new ArrayList<>();
 					for (int i = v.size(); i < u.size(); i++)
 						w.add(u.get(i));
 
 					// Figure 3 line 9: c := [\![ w]\!](witness(\varphi));
 					S witness = (S)transition.getWitness(ba);
 					List<S> c = new ArrayList<S>();
-					List<F> cF = new ArrayList<F>(); // a sequence of lamda x.alpha, where alpha is a constant S
+					List<F> cF = new ArrayList<>(); // a sequence of lamda x.alpha, where alpha is a constant S
 					// stored in List<S> c
 					for (int i = 0; i < u.size() - v.size(); i++) {
 						c.add(ba.MkSubstFuncConst(w.get(i), witness));
@@ -634,12 +667,12 @@ public class SFT<P, F, S> extends Automaton<P, S> {
 					for (int i = 0; i < u.size(); i++)
 						if (!ba.CheckGuardedEquality((P) transition.guard, u.get(i), v.get(i)))
 							return false;
-					List<F> w = new ArrayList<F>();
+					List<F> w = new ArrayList<>();
 					for (int i = u.size(); i < v.size(); i++)
 						w.add(v.get(i));
 					S witness = (S)transition.getWitness(ba);
 					List<S> c = new ArrayList<S>();
-					List<F> cF = new ArrayList<F>(); // a sequence of lamda x.alpha, where alpha is a constant S
+					List<F> cF = new ArrayList<>(); // a sequence of lamda x.alpha, where alpha is a constant S
 					// stored in List<S> c
 					for (int i = 0; i < v.size() - u.size(); i++) {
 						c.add(ba.MkSubstFuncConst(w.get(i), witness));
@@ -674,7 +707,7 @@ public class SFT<P, F, S> extends Automaton<P, S> {
 	 * @param sft1withEps symbolic finite transducer 1 who may has epsilon transitions
 	 * @param sft2withEps symbolic finite transducer 2 who may has epsilon transitions
 	 */
-	public static <P, F, S> List<S> witness1disequality(SFT<P, F, S> sft1withEps,
+	public static <P, F extends TermInterface, S> List<S> witness1disequality(SFT<P, F, S> sft1withEps,
 														SFT<P, F, S> sft2withEps,
 														BooleanAlgebraSubst<P, F, S> ba) throws TimeoutException {
 		SFTProduct<P, F, S> product = SFTProduct.MkSFTProduct(sft1withEps, sft2withEps, ba);
@@ -702,8 +735,8 @@ public class SFT<P, F, S> extends Automaton<P, S> {
 				previousPath.add((S) transition.getWitness(ba));
 				path.put(transition.to, previousPath);
 
-				List<F> u = new ArrayList<F>();
-				List<F> v = new ArrayList<F>();
+				List<F> u = new ArrayList<>();
+				List<F> v = new ArrayList<>();
 				for (S a: promise.first)
 					u.add(ba.MkFuncConst(a));
 				for (S b: promise.second)
@@ -717,8 +750,8 @@ public class SFT<P, F, S> extends Automaton<P, S> {
 
 					if (tails1.size() > 1 || tails2.size() > 1)
 						return previousPath;
-					List<F> finalU = new ArrayList<F>(u);
-					List<F> finalV = new ArrayList<F>(v);
+					List<F> finalU = new ArrayList<>(u);
+					List<F> finalV = new ArrayList<>(v);
 					for (List<S> tail: tails1)
 						for (S element: tail)
 							finalU.add(ba.MkFuncConst(element));
@@ -738,12 +771,12 @@ public class SFT<P, F, S> extends Automaton<P, S> {
 							previousPath.addAll(product.getWitness(transition.to, ba));
 							return previousPath;
 						}
-					List<F> w = new ArrayList<F>();
+					List<F> w = new ArrayList<>();
 					for (int i = v.size(); i < u.size(); i++)
 						w.add(u.get(i));
 					S witness = (S) transition.getWitness(ba);
 					List<S> c = new ArrayList<S>();
-					List<F> cF = new ArrayList<F>(); // a sequence of lamda x.alpha, where alpha is a constant S
+					List<F> cF = new ArrayList<>(); // a sequence of lamda x.alpha, where alpha is a constant S
 					// stored in List<S> c
 					for (int i = 0; i < u.size() - v.size(); i++) {
 						c.add(ba.MkSubstFuncConst(w.get(i), witness));
@@ -769,12 +802,12 @@ public class SFT<P, F, S> extends Automaton<P, S> {
 							previousPath.addAll(product.getWitness(transition.to, ba));
 							return previousPath;
 						}
-					List<F> w = new ArrayList<F>();
+					List<F> w = new ArrayList<>();
 					for (int i = u.size(); i < v.size(); i++)
 						w.add(v.get(i));
 					S witness = (S) transition.getWitness(ba);
 					List<S> c = new ArrayList<S>();
-					List<F> cF = new ArrayList<F>(); // a sequence of lamda x.alpha, where alpha is a constant S
+					List<F> cF = new ArrayList<>(); // a sequence of lamda x.alpha, where alpha is a constant S
 					// stored in List<S> c
 					for (int i = 0; i < v.size() - u.size(); i++) {
 						c.add(ba.MkSubstFuncConst(w.get(i), witness));
@@ -824,7 +857,7 @@ public class SFT<P, F, S> extends Automaton<P, S> {
 	/**
 	 * compute the inverse image under <code>sfa</code>, which means compose(sft, sfa)
 	 * Page 7, left column, the first line
-	 * 
+	 *
 	 * @throws TimeoutException
 	 */
 	public SFA<P, S> inverseImage(SFA<P, S> sfaWithEps, BooleanAlgebraSubst<P, F, S> ba) throws TimeoutException {
@@ -834,21 +867,21 @@ public class SFT<P, F, S> extends Automaton<P, S> {
 
 	/**
 	 * convert a sfa to a sft by adding empty set of output functions in every transition
-	 * 
+	 *
 	 * @return corresponding sft
 	 */
-	private static <P, F, S> SFT<P, F, S> SFAtoSFT(SFA<P, S> sfa, BooleanAlgebraSubst<P, F, S> ba) {
-		Collection<SFTMove<P, F, S>> transitions = new ArrayList<SFTMove<P, F, S>>();
+	private static <P, F extends TermInterface, S> SFT<P, F, S> SFAtoSFT(SFA<P, S> sfa, BooleanAlgebraSubst<P, F, S> ba) {
+		Collection<SFTMove<P, F, S>> transitions = new ArrayList<>();
 		for (Integer state: sfa.getStates()) {
 			for (SFAInputMove<P, S> transition: sfa.getInputMovesFrom(state)) {
-				List<F> outputFunctions = new LinkedList<F>();
-				SFTInputMove<P, F, S> newTrans = new SFTInputMove<P, F, S>(transition.from, transition.to,
+				List<F> outputFunctions = new LinkedList<>();
+				SFTInputMove<P, F, S> newTrans = new SFTInputMove<>(transition.from, transition.to,
 						transition.guard, outputFunctions);
 				transitions.add(newTrans);
 			}
 			for (SFAEpsilon<P, S> transition: sfa.getEpsilonFrom(state)) {
 				List<S> outputs = new LinkedList<S>();
-				SFTEpsilon<P, F, S> newTrans = new SFTEpsilon<P, F, S>(transition.from, transition.to, outputs);
+				SFTEpsilon<P, F, S> newTrans = new SFTEpsilon<>(transition.from, transition.to, outputs);
 				transitions.add(newTrans);
 			}
 		}
@@ -862,7 +895,7 @@ public class SFT<P, F, S> extends Automaton<P, S> {
 	 * check whether <code>input</code> is in the pre image of <code>transducer</code> under <code>output</code>
 	 *
 	 */
-	public static <P, F, S> boolean typeCheck(SFA<P, S> input, SFT<P, F, S> transducer, SFA<P, S> output,
+	public static <P, F extends TermInterface, S> boolean typeCheck(SFA<P, S> input, SFT<P, F, S> transducer, SFA<P, S> output,
 							 BooleanAlgebraSubst<P, F, S> ba) throws TimeoutException  {
 		SFA<P, S> complementOfOutput = output.complement(ba);
 		SFA<P, S> preImage = transducer.inverseImage(complementOfOutput, ba);
@@ -1098,7 +1131,7 @@ public class SFT<P, F, S> extends Automaton<P, S> {
 	public Collection<SFTEpsilon<P, F, S>> getEpsilonMovesFrom(Integer state) {
 		Collection<SFTEpsilon<P, F, S>> trset = epsTransitionsFrom.get(state);
 		if (trset == null) {
-			trset = new HashSet<SFTEpsilon<P, F, S>>();
+			trset = new HashSet<>();
 			epsTransitionsFrom.put(state, trset);
 		}
 		return trset;
@@ -1108,7 +1141,7 @@ public class SFT<P, F, S> extends Automaton<P, S> {
 	 * Returns the set of transitions starting set of states
 	 */
 	public Collection<SFTEpsilon<P, F, S>> getEpsilonMovesFrom(Collection<Integer> stateSet) {
-		Collection<SFTEpsilon<P, F, S>> transitions = new LinkedList<SFTEpsilon<P, F, S>>();
+		Collection<SFTEpsilon<P, F, S>> transitions = new LinkedList<>();
 		for (Integer state : stateSet)
 			transitions.addAll(getEpsilonMovesFrom(state));
 		return transitions;
@@ -1130,7 +1163,7 @@ public class SFT<P, F, S> extends Automaton<P, S> {
 	 * Returns the set of transitions starting set of states
 	 */
 	public Collection<SFTEpsilon<P, F, S>> getEpsilonMovesTo(Collection<Integer> stateSet) {
-		Collection<SFTEpsilon<P, F, S>> transitions = new LinkedList<SFTEpsilon<P, F, S>>();
+		Collection<SFTEpsilon<P, F, S>> transitions = new LinkedList<>();
 		for (Integer state : stateSet)
 			transitions.addAll(getEpsilonMovesTo(state));
 		return transitions;
@@ -1141,7 +1174,7 @@ public class SFT<P, F, S> extends Automaton<P, S> {
 	 * Returns the set of transitions starting at state <code>s</code>
 	 */
 	public Collection<SFTMove<P, F, S>> getTransitionsFrom(Integer state) {
-		Collection<SFTMove<P, F, S>> trset = new HashSet<SFTMove<P, F, S>>();
+		Collection<SFTMove<P, F, S>> trset = new HashSet<>();
 		trset.addAll(getInputMovesFrom(state));
 		trset.addAll(getEpsilonMovesFrom(state));
 		return trset;
@@ -1151,7 +1184,7 @@ public class SFT<P, F, S> extends Automaton<P, S> {
 	 * Returns the set of transitions starting at a set of states
 	 */
 	public Collection<SFTMove<P, F, S>> getTransitionsFrom(Collection<Integer> stateSet) {
-		Collection<SFTMove<P, F, S>> trset = new HashSet<SFTMove<P, F, S>>();
+		Collection<SFTMove<P, F, S>> trset = new HashSet<>();
 		trset.addAll(getInputMovesFrom(stateSet));
 		trset.addAll(getEpsilonMovesFrom(stateSet));
 		return trset;
@@ -1161,7 +1194,7 @@ public class SFT<P, F, S> extends Automaton<P, S> {
 	 * Returns the set of transitions to state <code>s</code>
 	 */
 	public Collection<SFTMove<P, F, S>> getTransitionsTo(Integer state) {
-		Collection<SFTMove<P, F, S>> trset = new HashSet<SFTMove<P, F, S>>();
+		Collection<SFTMove<P, F, S>> trset = new HashSet<>();
 		trset.addAll(getInputMovesTo(state));
 		trset.addAll(getEpsilonMovesTo(state));
 		return trset;
@@ -1171,7 +1204,7 @@ public class SFT<P, F, S> extends Automaton<P, S> {
 	 * Returns the set of transitions to a set of states
 	 */
 	public Collection<SFTMove<P, F, S>> getTransitionsTo(Collection<Integer> stateSet) {
-		Collection<SFTMove<P, F, S>> trset = new HashSet<SFTMove<P, F, S>>();
+		Collection<SFTMove<P, F, S>> trset = new HashSet<>();
 		trset.addAll(getInputMovesTo(stateSet));
 		trset.addAll(getEpsilonMovesTo(stateSet));
 		return trset;
@@ -1224,7 +1257,7 @@ public class SFT<P, F, S> extends Automaton<P, S> {
 	public Collection<Integer> getStates() {
 		return states;
 	}
-	
+
 	@Override
 	public Object clone() {
 		SFT<P, F, S> cl = new SFT<P, F, S>();

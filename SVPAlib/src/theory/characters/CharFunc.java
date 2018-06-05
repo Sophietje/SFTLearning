@@ -12,7 +12,7 @@ import theory.intervals.UnaryCharIntervalSolver;
 /**
  * CharFunc: a character function of the form x0+off where off is an offset
  */
-public interface CharFunc {
+public interface CharFunc extends TermInterface {
 
 	/**
 	 * @return the result of replacing f1's argument with this

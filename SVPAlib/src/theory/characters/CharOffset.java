@@ -10,8 +10,11 @@ package theory.characters;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
+import com.sun.xml.internal.xsom.impl.Ref;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 
 import com.google.common.collect.ImmutableList;

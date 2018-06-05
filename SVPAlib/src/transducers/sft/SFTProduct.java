@@ -23,6 +23,7 @@ import automata.sfa.SFA;
 import automata.sfa.SFAMove;
 import automata.sfa.SFAInputMove;
 import theory.BooleanAlgebraSubst;
+import theory.characters.TermInterface;
 import utilities.Pair;
 
 /**
@@ -38,7 +39,7 @@ import utilities.Pair;
  * @param <S>
  *			The domain of the Boolean algebra
  */
-public class SFTProduct<P, F, S> extends Automaton<P, S> {
+public class SFTProduct<P, F extends TermInterface, S> extends Automaton<P, S> {
 
 	// SFT properties
 	protected Collection<Integer> states;
@@ -75,7 +76,7 @@ public class SFTProduct<P, F, S> extends Automaton<P, S> {
 	* Create a product of two SFTs (removes unreachable states and all tails of final states)
 	* Page 3, in the 8-th line of left column, definition 7
 	*/
-	public static <P, F, S> SFTProduct<P, F, S> MkSFTProduct(SFT<P, F, S> sft1withEps, SFT<P, F, S> sft2withEps, BooleanAlgebraSubst<P, F, S> ba) {
+	public static <P, F extends TermInterface, S> SFTProduct<P, F, S> MkSFTProduct(SFT<P, F, S> sft1withEps, SFT<P, F, S> sft2withEps, BooleanAlgebraSubst<P, F, S> ba) {
 		// Remove epsilons
 		SFT<P, F, S> sft1 = sft1withEps.removeEpsilonMoves(ba);
 		SFT<P, F, S> sft2 = sft2withEps.removeEpsilonMoves(ba);
@@ -103,7 +104,7 @@ public class SFTProduct<P, F, S> extends Automaton<P, S> {
 			// If both states are final, combine is final
 			if (sft1.isFinalState(currState.first) && sft2.isFinalState(currState.second)) {
 				finalStatesAndTails.put(currStateId, new Pair<Set<List<S>>, Set<List<S>>>(
-						sft1.getFinalStatesAndTails().get(currState.first), 
+						sft1.getFinalStatesAndTails().get(currState.first),
 						sft2.getFinalStatesAndTails().get(currState.second)));
 			}
 
@@ -159,7 +160,7 @@ public class SFTProduct<P, F, S> extends Automaton<P, S> {
 	/*
 	* Create a product of two SFTs (removes unreachable states)
 	*/
-	private static <P, F, S> SFTProduct<P, F, S> MkSFTProduct(Collection<SFTMove<P, F, S>> transitions, Integer initialState,
+	private static <P, F extends TermInterface, S> SFTProduct<P, F, S> MkSFTProduct(Collection<SFTMove<P, F, S>> transitions, Integer initialState,
 															  Map<Integer, Pair<Set<List<S>>, Set<List<S>>>> finalStatesAndTails,
 													 BooleanAlgebraSubst<P, F, S> ba) {
 		SFTProduct<P, F, S> aut = new SFTProduct<P, F, S>();
@@ -193,7 +194,7 @@ public class SFTProduct<P, F, S> extends Automaton<P, S> {
 		aut.states = new HashSet<Integer>();
 		aut.states.add(initialState);
 		aut.states.addAll(finalStatesAndTails.keySet());
-		
+
 		try {
 			for (SFTMove<P, F, S> t : transitions)
 				aut.addTransition(t, ba, false);
@@ -206,7 +207,7 @@ public class SFTProduct<P, F, S> extends Automaton<P, S> {
 	/**
 	 * Returns the empty SFTProduct
 	 */
-	public static <P, F, S> SFTProduct<P, F, S> getEmptySFTProduct(BooleanAlgebraSubst<P, F, S> ba) {
+	public static <P, F extends TermInterface, S> SFTProduct<P, F, S> getEmptySFTProduct(BooleanAlgebraSubst<P, F, S> ba) {
 		SFTProduct<P, F, S> aut = new SFTProduct<P, F, S>();
 		aut.states = new HashSet<Integer>();
 		aut.states.add(0);
@@ -230,7 +231,7 @@ public class SFTProduct<P, F, S> extends Automaton<P, S> {
 	 * @param steps the number of steps, which should be a natural number
 	 * @return
 	 */
-	private static <P, F, S> List<List<SFTProductInputMove<P, F, S>>> possibleTransitionChains(SFTProduct<P, F, S> sft, Integer startState, int steps) {
+	private static <P, F extends TermInterface, S> List<List<SFTProductInputMove<P, F, S>>> possibleTransitionChains(SFTProduct<P, F, S> sft, Integer startState, int steps) {
 		List<List<SFTProductInputMove<P, F, S>>> chains = new ArrayList<List<SFTProductInputMove<P, F, S>>>();
 		for (SFTProductInputMove<P, F, S> initialTransition: sft.getInputMovesFrom(startState)) {
 			List<SFTProductInputMove<P, F, S>> tempList = new LinkedList<SFTProductInputMove<P, F, S>>();
@@ -241,7 +242,7 @@ public class SFTProduct<P, F, S> extends Automaton<P, S> {
 	}
 
 	// use backtrack method to get all possible transition chains
-	private static <P, F, S> void backtrack(List<List<SFTProductInputMove<P, F, S>>> chains, List<SFTProductInputMove<P, F, S>> tempList, SFTProduct<P, F, S> sft, int remainSteps) {
+	private static <P, F extends TermInterface, S> void backtrack(List<List<SFTProductInputMove<P, F, S>>> chains, List<SFTProductInputMove<P, F, S>> tempList, SFTProduct<P, F, S> sft, int remainSteps) {
 		if (remainSteps < 0)
 			return; // no solution
 		else if (remainSteps == 0)
@@ -431,7 +432,7 @@ public class SFTProduct<P, F, S> extends Automaton<P, S> {
 	public Collection<Integer> getStates() {
 		return states;
 	}
-	
+
 	@Override
 	public Object clone() {
 		SFTProduct<P, F, S> cl = new SFTProduct<P, F, S>();
