@@ -12,6 +12,7 @@ import java.util.HashSet;
 
 import org.sat4j.specs.TimeoutException;
 
+import theory.characters.CharPred;
 import utilities.Pair;
 
 /**

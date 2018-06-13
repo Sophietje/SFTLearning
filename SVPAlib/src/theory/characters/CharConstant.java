@@ -23,7 +23,7 @@ public class CharConstant implements CharFunc {
 
 	@Override
 	public String toString() {
-		return String.format("x -> %s", CharPred.printChar(c));
+		return String.format("%s", CharPred.printChar(c));
 	}
 
 	public CharFunc substIn(CharFunc f1) {

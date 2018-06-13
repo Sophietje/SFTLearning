@@ -1,8 +1,7 @@
-package learningalgorithm;
+package sftlearning;
 
 import org.sat4j.specs.TimeoutException;
 import theory.characters.CharFunc;
-import theory.characters.CharOffset;
 import theory.characters.CharPred;
 import theory.intervals.UnaryCharIntervalSolver;
 import transducers.sft.SFT;
@@ -56,7 +55,15 @@ public class IOStringOracleBinBSFT extends SymbolicOracle<CharPred, CharFunc, Ch
         SFT<CharPred, CharFunc, Character> learned = null;
         try {
             learned = ell.learn(o, ba);
-            learned.createDotFile("testStringOracle", "/Users/NW/Documents/Djungarian/SVPAlib/src/learning/sfa");
+            List<List<Character>> outputs = new ArrayList<>();
+            List<Character> output = new ArrayList<>();
+            output.add('a');
+            output.add('b');
+            output.add('a');
+            outputs.add(output);
+
+//            transducers.sft.SFT.backtrack(outputs, new ArrayList<Character>, learned, 3, new ArrayList<Character>, 0, ba);
+//            learned.createDotFile("testStringOracle", "/Users/NW/Documents/Djungarian/SVPAlib/src/transducers/sft");
         } catch (TimeoutException e) {
             e.printStackTrace();
         }

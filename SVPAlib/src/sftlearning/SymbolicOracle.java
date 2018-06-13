@@ -1,12 +1,13 @@
-package learningalgorithm;
+package sftlearning;
 
 import org.sat4j.specs.TimeoutException;
+import theory.characters.CharPred;
 import theory.characters.TermInterface;
 import transducers.sft.SFT;
 
 import java.util.List;
 
-public abstract class SymbolicOracle<P, F extends TermInterface, S> {
+public abstract class SymbolicOracle<P extends CharPred, F extends TermInterface, S> {
 
     private int numEquivalence = 0;
     private int numMembership = 0;

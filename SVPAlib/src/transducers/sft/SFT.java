@@ -25,6 +25,7 @@ import automata.sfa.SFAMove;
 import automata.sfa.SFAEpsilon;
 import automata.sfa.SFAInputMove;
 import theory.BooleanAlgebraSubst;
+import theory.characters.CharPred;
 import theory.characters.TermInterface;
 import utilities.Pair;
 
@@ -41,7 +42,7 @@ import utilities.Pair;
  * @param <S>
  *			The domain of the Boolean algebra
  */
-public class SFT<P, F extends TermInterface, S> extends Automaton<P, S> {
+public class SFT<P extends CharPred, F extends TermInterface, S> extends Automaton<P, S> {
 
 	// SFT properties
 	protected Collection<Integer> states;
@@ -80,9 +81,9 @@ public class SFT<P, F extends TermInterface, S> extends Automaton<P, S> {
 	* Create a SFT (removes unreachable states)
 	* Page 3, left column, the last 4 lines, definition 2
 	*/
-	public static <P, F extends TermInterface, S> SFT<P, F, S> MkSFT(Collection<SFTMove<P, F, S>> transitions, Integer initialState,
-											   Map<Integer, Set<List<S>>> finalStatesAndTails,
-													 BooleanAlgebraSubst<P, F, S> ba) {
+	public static <P extends CharPred, F extends TermInterface, S> SFT<P, F, S> MkSFT(Collection<SFTMove<P, F, S>> transitions, Integer initialState,
+																					  Map<Integer, Set<List<S>>> finalStatesAndTails,
+																					  BooleanAlgebraSubst<P, F, S> ba) {
 		SFT<P, F, S> aut = new SFT<P, F, S>();
 
 		// Initialize state set
@@ -112,10 +113,11 @@ public class SFT<P, F extends TermInterface, S> extends Automaton<P, S> {
 		}
 	}
 
-	public static <P, F extends TermInterface, S> SFT<P, F, S> MkSFT(List<SFTMove<P, F, S>> transitions, Integer initialState,
+	public static <P extends CharPred, F extends TermInterface, S> SFT<P, F, S> MkSFT(List<SFTMove<P, F, S>> transitions, Integer initialState,
 															 Map<Integer, Set<List<S>>> finalStatesAndTails,
 															 BooleanAlgebraSubst<P, F, S> ba) {
 		SFT<P, F, S> aut = new SFT<>();
+		System.out.println("In MkSFT with moves = "+transitions);
 
 		// Initialize state set
 		aut.initialState = initialState;
@@ -136,8 +138,10 @@ public class SFT<P, F extends TermInterface, S> extends Automaton<P, S> {
 		aut.states.addAll(finalStatesAndTails.keySet());
 
 		try {
-			for (SFTMove<P, F, S> t : transitions)
+			for (SFTMove<P, F, S> t : transitions) {
+				System.out.println("ADDING THE TRANSITION "+t+" TO THE FINAL SFT");
 				aut.addTransition(t, ba, false);
+			}
 			return aut;
 		} catch (TimeoutException toe) {
 			return null;
@@ -147,7 +151,7 @@ public class SFT<P, F extends TermInterface, S> extends Automaton<P, S> {
 	/**
 	 * Returns the empty SFT
 	 */
-	public static <P, F extends TermInterface, S> SFT<P, F, S> getEmptySFT(BooleanAlgebraSubst<P, F, S> ba) {
+	public static <P extends CharPred, F extends TermInterface, S> SFT<P, F, S> getEmptySFT(BooleanAlgebraSubst<P, F, S> ba) {
 		SFT<P, F, S> aut = new SFT<>();
 		aut.states = new HashSet<Integer>();
 		aut.states.add(0);
@@ -171,7 +175,7 @@ public class SFT<P, F extends TermInterface, S> extends Automaton<P, S> {
 	 * @return one output sequence, null if undefined
 	 * @throws TimeoutException
 	 */
-	public static <P, F extends TermInterface, S> List<S> outputOn(SFT<P, F, S> sftWithEps, List<S> input,
+	public static <P extends CharPred, F extends TermInterface, S> List<S> outputOn(SFT<P, F, S> sftWithEps, List<S> input,
 												 BooleanAlgebraSubst<P, F, S> ba) throws TimeoutException {
 
 		// codes for nondeterministic but single-valued symbolic finite transducers
@@ -191,7 +195,7 @@ public class SFT<P, F extends TermInterface, S> extends Automaton<P, S> {
 	}
 
 	// use backtrack method to get all possible outputs
-	private static <P, F extends TermInterface, S> void backtrack(List<List<S>> outputs, List<S> tempList, SFT<P, F, S> sft,
+	private static <P extends CharPred, F extends TermInterface, S> void backtrack(List<List<S>> outputs, List<S> tempList, SFT<P, F, S> sft,
 											Integer currentState, List<S> input, int position,
 											BooleanAlgebraSubst<P, F, S> ba) throws TimeoutException {
 
@@ -244,7 +248,7 @@ public class SFT<P, F extends TermInterface, S> extends Automaton<P, S> {
 	 *
 	 * @throws TimeoutException
 	 */
-	public static <P, F extends TermInterface, S> SFT<P, F, S> compose(SFT<P, F, S> sft1withEps, SFT<P, F, S> sft2withEps,
+	public static <P extends CharPred, F extends TermInterface, S> SFT<P, F, S> compose(SFT<P, F, S> sft1withEps, SFT<P, F, S> sft2withEps,
 													   BooleanAlgebraSubst<P, F, S> ba) throws TimeoutException {
 		// Remove epsilons
 		SFT<P, F, S> sft1 = sft1withEps.removeEpsilonMoves(ba);
@@ -378,7 +382,7 @@ public class SFT<P, F extends TermInterface, S> extends Automaton<P, S> {
 	/**
 	 * return an equivalent copy without epsilon moves
 	 */
-	protected static <P, F extends TermInterface, S> SFT<P, F, S> removeEpsilonMovesFrom(SFT<P, F, S> sft,
+	protected static <P extends CharPred, F extends TermInterface, S> SFT<P, F, S> removeEpsilonMovesFrom(SFT<P, F, S> sft,
 																		 BooleanAlgebraSubst<P, F, S> ba) {
 
 		if (sft.isEpsilonFree)
@@ -442,7 +446,7 @@ public class SFT<P, F extends TermInterface, S> extends Automaton<P, S> {
 	 * @param sft symbolic finite transducer
 	 * @param currentState the start point
 	 */
-	private static <P, F extends TermInterface, S> Map<Integer, List<SFTEpsilon<P, F, S>>> getSFTEpsClosureAndPath(SFT<P, F, S> sft, Integer currentState) {
+	private static <P extends CharPred, F extends TermInterface, S> Map<Integer, List<SFTEpsilon<P, F, S>>> getSFTEpsClosureAndPath(SFT<P, F, S> sft, Integer currentState) {
 		Map<Integer, List<SFTEpsilon<P, F, S>>> epsilonClosureAndPath = new HashMap<>();
 
 		Collection<Integer> reached = new HashSet<Integer>(currentState);
@@ -479,7 +483,7 @@ public class SFT<P, F extends TermInterface, S> extends Automaton<P, S> {
 	 * @param sft symbolic finite transducer
 	 * @param currentState the start point
 	 */
-	private static <P, F extends TermInterface, S> Collection<Integer> getSFTEpsClosure(SFT<P, F, S> sft, Integer currentState) {
+	private static <P extends CharPred, F extends TermInterface, S> Collection<Integer> getSFTEpsClosure(SFT<P, F, S> sft, Integer currentState) {
 		Collection<Integer> epsilonClosure = new HashSet<Integer>();
 
 		Collection<Integer> reached = new HashSet<Integer>(currentState);
@@ -516,7 +520,7 @@ public class SFT<P, F extends TermInterface, S> extends Automaton<P, S> {
 	 * @param steps the number of steps, which should be a natural number
 	 * @return
 	 */
-	private static <P, F extends TermInterface, S> List<List<SFTMove<P, F, S>>> possibleTransitionChains(SFT<P, F, S> sft, Integer startState, int steps) {
+	private static <P extends CharPred, F extends TermInterface, S> List<List<SFTMove<P, F, S>>> possibleTransitionChains(SFT<P, F, S> sft, Integer startState, int steps) {
 		List<List<SFTMove<P, F, S>>> chains = new ArrayList<>();
 		for (SFTMove<P, F, S> initialTransition: sft.getInputMovesFrom(startState)) {
 			List<SFTMove<P, F, S>> tempList = new LinkedList<>();
@@ -527,7 +531,7 @@ public class SFT<P, F extends TermInterface, S> extends Automaton<P, S> {
 	}
 
 	// use backtrack method to get all possible transition chains
-	private static <P, F extends TermInterface, S> void backtrack(List<List<SFTMove<P, F, S>>> chains, List<SFTMove<P, F, S>> tempList, SFT<P, F, S> sft, int remainSteps) {
+	private static <P extends CharPred, F extends TermInterface, S> void backtrack(List<List<SFTMove<P, F, S>>> chains, List<SFTMove<P, F, S>> tempList, SFT<P, F, S> sft, int remainSteps) {
 		if (remainSteps < 0)
 			return; // no solution
 		else if (remainSteps == 0)
@@ -554,7 +558,7 @@ public class SFT<P, F extends TermInterface, S> extends Automaton<P, S> {
 	 * @param sft1withEps symbolic finite transducer 1 who may have epsilon transitions
 	 * @param sft2withEps symbolic finite transducer 2 who may have epsilon transitions
 	 */
-	public static <P, F extends TermInterface, S> boolean decide1equality(SFT<P, F, S> sft1withEps,
+	public static <P extends CharPred, F extends TermInterface, S> boolean decide1equality(SFT<P, F, S> sft1withEps,
 													SFT<P, F, S> sft2withEps,
 													BooleanAlgebraSubst<P, F, S> ba) throws TimeoutException {
 		// Figure 3 line 1: C := A  \times B;
@@ -707,7 +711,7 @@ public class SFT<P, F extends TermInterface, S> extends Automaton<P, S> {
 	 * @param sft1withEps symbolic finite transducer 1 who may has epsilon transitions
 	 * @param sft2withEps symbolic finite transducer 2 who may has epsilon transitions
 	 */
-	public static <P, F extends TermInterface, S> List<S> witness1disequality(SFT<P, F, S> sft1withEps,
+	public static <P extends CharPred, F extends TermInterface, S> List<S> witness1disequality(SFT<P, F, S> sft1withEps,
 														SFT<P, F, S> sft2withEps,
 														BooleanAlgebraSubst<P, F, S> ba) throws TimeoutException {
 		SFTProduct<P, F, S> product = SFTProduct.MkSFTProduct(sft1withEps, sft2withEps, ba);
@@ -870,7 +874,7 @@ public class SFT<P, F extends TermInterface, S> extends Automaton<P, S> {
 	 *
 	 * @return corresponding sft
 	 */
-	private static <P, F extends TermInterface, S> SFT<P, F, S> SFAtoSFT(SFA<P, S> sfa, BooleanAlgebraSubst<P, F, S> ba) {
+	private static <P extends CharPred, F extends TermInterface, S> SFT<P, F, S> SFAtoSFT(SFA<P, S> sfa, BooleanAlgebraSubst<P, F, S> ba) {
 		Collection<SFTMove<P, F, S>> transitions = new ArrayList<>();
 		for (Integer state: sfa.getStates()) {
 			for (SFAInputMove<P, S> transition: sfa.getInputMovesFrom(state)) {
@@ -895,7 +899,7 @@ public class SFT<P, F extends TermInterface, S> extends Automaton<P, S> {
 	 * check whether <code>input</code> is in the pre image of <code>transducer</code> under <code>output</code>
 	 *
 	 */
-	public static <P, F extends TermInterface, S> boolean typeCheck(SFA<P, S> input, SFT<P, F, S> transducer, SFA<P, S> output,
+	public static <P extends CharPred, F extends TermInterface, S> boolean typeCheck(SFA<P, S> input, SFT<P, F, S> transducer, SFA<P, S> output,
 							 BooleanAlgebraSubst<P, F, S> ba) throws TimeoutException  {
 		SFA<P, S> complementOfOutput = output.complement(ba);
 		SFA<P, S> preImage = transducer.inverseImage(complementOfOutput, ba);
@@ -1048,11 +1052,12 @@ public class SFT<P, F extends TermInterface, S> extends Automaton<P, S> {
 	private void addTransition(SFTMove<P, F, S> transition, BooleanAlgebraSubst<P, F, S> ba, boolean skipSatCheck)
 			throws TimeoutException {
 
-		if (transition.isEpsilonTransition()) {
-			if (transition.to == transition.from)
-				return;
-			isEpsilonFree = false;
-		}
+//		if (transition.isEpsilonTransition()) {
+//			System.out.println("ADDING EPSILON TRANSITION");
+//			getEpsilonMovesFrom(transition.from).add((SFTEpsilon<P, F, S>) transition);
+//			getEpsilonMovesTo(transition.to).add((SFTEpsilon<P, F, S>) transition);
+//			isEpsilonFree = false;
+//		}
 
 		if (skipSatCheck || transition.isSatisfiable(ba)) {
 
@@ -1065,9 +1070,11 @@ public class SFT<P, F extends TermInterface, S> extends Automaton<P, S> {
 			states.add(transition.to);
 
 			if (transition.isEpsilonTransition()) {
+				System.out.println("Adding epsilon transition");
 				getEpsilonMovesFrom(transition.from).add((SFTEpsilon<P, F, S>) transition);
 				getEpsilonMovesTo(transition.to).add((SFTEpsilon<P, F, S>) transition);
 			} else {
+				System.out.println("Adding input move transition");
 				getInputMovesFrom(transition.from).add((SFTInputMove<P, F, S>) transition);
 				getInputMovesTo(transition.to).add((SFTInputMove<P, F, S>) transition);
 			}

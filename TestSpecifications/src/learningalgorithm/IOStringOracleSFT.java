@@ -1,6 +1,7 @@
 package learningalgorithm;
 
 import org.sat4j.specs.TimeoutException;
+import sftlearning.SymbolicOracle;
 import theory.characters.CharFunc;
 import theory.characters.CharOffset;
 import theory.characters.CharPred;
@@ -11,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
-public class IOStringOracleSFT extends SymbolicOracle<CharPred, CharFunc, Character>{
+public class IOStringOracleSFT extends SymbolicOracle<CharPred, CharFunc, Character> {
 
     private Scanner sc;
 

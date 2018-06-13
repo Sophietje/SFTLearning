@@ -10,6 +10,7 @@ package transducers.sft;
 import java.util.List;
 
 import theory.BooleanAlgebra;
+import theory.characters.CharConstant;
 
 /**
  * SFT epsilon transition
@@ -27,6 +28,13 @@ public class SFTEpsilon<P, F, S> extends SFTMove<P, F, S> {
 	/**
 	 * An Epsilon transition from <code>from<code> to <code>to</code> performing the <code>outputs</code>
 	 */
+//	public SFTEpsilon(Integer from, Integer to, List<S> outputs) {
+//		super(from, to);
+//		for (S s : outputs) {
+//			this.outputs.add(new CharConstant(s));
+//		}
+//	}
+
 	public SFTEpsilon(Integer from, Integer to, List<S> outputs) {
 		super(from, to);
 		this.outputs = outputs;
@@ -73,10 +81,17 @@ public class SFTEpsilon<P, F, S> extends SFTMove<P, F, S> {
 	public String toString() {
 		StringBuilder stringOutputs = new StringBuilder();
 		for (S output: outputs) {
-			stringOutputs.append(output.toString());
+			if (output == null) {
+				stringOutputs.append("[]");
+			} else {
+				stringOutputs.append(output.toString());
+			}
 			stringOutputs.append(' ');
 		}
-		return String.format("E: %s -%s-> %s", from, stringOutputs.toString(), to);
+		if (stringOutputs.length() <= 1) {
+			return String.format("E: %s -[]/[] -> %s", from, to);
+		}
+		return String.format("E: %s -[]/%s-> %s", from, stringOutputs.toString(), to);
 	}
 	
 	@Override

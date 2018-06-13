@@ -1,18 +1,20 @@
-package learningalgorithm;
+package sftlearning;
 
+import com.google.common.collect.ImmutableList;
 import org.sat4j.specs.TimeoutException;
 import theory.BooleanAlgebraSubst;
+import theory.characters.CharConstant;
+import theory.characters.CharOffset;
+import theory.characters.CharPred;
 import theory.characters.TermInterface;
 import transducers.sft.SFT;
+import transducers.sft.SFTEpsilon;
 import transducers.sft.SFTInputMove;
 import transducers.sft.SFTMove;
 
 import java.util.*;
-import java.util.concurrent.Callable;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
-public class BinBSFTLearner<P, F extends TermInterface, S> {
+public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
 
     public boolean debugOutput;
 
@@ -83,10 +85,10 @@ public class BinBSFTLearner<P, F extends TermInterface, S> {
     /**
      * Class that represents an Observation Table from which we can deduce an SFA
      */
-    private class ObsTable {
-        public List<List<S>> S, R, E, SUR;
-        public Map<List<S>, List<S>> f;
-        public S arbchar;
+    public class ObsTable {
+        private List<List<S>> S, R, E, SUR;
+        private Map<List<S>, List<S>> f;
+        private S arbchar;
 
         /**
          * Initialize the observation table
@@ -325,19 +327,42 @@ public class BinBSFTLearner<P, F extends TermInterface, S> {
             //now generalize the evidence into predicates
             List<SFTMove<P, F, S>> moves = new ArrayList<>();
             for (int i = 0; i < S.size(); i++) {
+                //sb is the state from which we will add transitions
                 List<List<S>> sb = row(S.get(i));
-                ArrayList<Collection<S>> groups_arr = new ArrayList<>();
+                Map<Set<S>, List<S>> groups = new HashMap<>();
+                int j=0;
                 for (List<S> sp : S) {
-                    groups_arr.add(transitions.get(sb).get(row(sp)));
+                    // sp is the state to which we 'move'
+                    System.out.println("Added to groups: "+transitions.get(sb).get(row(sp))+" with output "+f.get(S.get(i)));
+                    groups.put(transitions.get(sb).get(row(sp)), f.get(S.get(i)));
                 }
-                LinkedHashMap<P, List<F>> sepPreds = ba.getSeparatingPredicatesAndTermFunctions(groups_arr, Long.MAX_VALUE);
-//                checkArgument(sepPreds.size() == S.size());
+                // sepPreds is a list of Predicates which are mapped to corresponding term functions
+                LinkedHashMap<P, List<F>> sepPreds = ba.getSeparatingPredicatesAndTermFunctions(groups, this, S.get(i), Long.MAX_VALUE);
+                System.out.println("Predicates with terms: "+sepPreds);
                 int index = 0;
                 for (P key : sepPreds.keySet()) {
-                    // Add the transition i---pred_j ---> j
+                    System.out.println("Current set of transitions: "+moves);
+                    System.out.println("Adding ("+i+") ---- "+key+" / "+sepPreds.get(key)+" ----> ("+index+")");
+                    // Cannot simply assume i will be next state because we can have multiple transitions from i to j with different predicates
+                    // Add the transition i---pred_j (key) / terms_j (sepPreds.get(key)) ---> j (index)
+
+                    System.out.println("Checking whether predicate is []");
+                    if (key == null || key.intervals == null || key.intervals.isEmpty() || key.intervals.get(0) == null) {
+                        System.out.println("Predicate is epsilon");
+                        List<S> output = new ArrayList<>();
+                        for (F f : sepPreds.get(key)) {
+                            if (f instanceof CharConstant) {
+                                output.add((S) (Character) ((CharConstant) f).c);
+                            }
+                        }
+                        moves.add(new SFTEpsilon<P, F, S>(i, index, output));
+//                        moves.add(new SFTEpsilon<P, F, S>(i, index, sepPreds.get(key)));
+                    }
+
                     moves.add(new SFTInputMove<>(i, index, key, sepPreds.get(key)));
                     index++;
                 }
+                System.out.println("Set of transitions after adding: "+moves);
 
             }
 
@@ -499,6 +524,26 @@ public class BinBSFTLearner<P, F extends TermInterface, S> {
                 }
             }
             return ret;
+        }
+
+        public List<List<S>> getS() {
+            return S;
+        }
+
+        public List<List<S>> getR() {
+            return R;
+        }
+
+        public List<List<S>> getE() {
+            return E;
+        }
+
+        public List<List<S>> getSUR() {
+            return SUR;
+        }
+
+        public Map<List<S>, List<S>> getF() {
+            return f;
         }
     }
 

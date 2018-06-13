@@ -1,6 +1,7 @@
 package learningalgorithm;
 
 import org.sat4j.specs.TimeoutException;
+import sftlearning.SymbolicOracle;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 import theory.BooleanAlgebraSubst;
 import theory.characters.CharFunc;

@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
-import learning.sfa.Learner;
 import learning.sfa.Oracle;
 import org.sat4j.specs.TimeoutException;
 
@@ -53,7 +52,7 @@ public class IOStringOracle2 extends Oracle<CharPred, Character> {
         SFA<CharPred, Character> learned = null;
         try {
             learned = ell.learn(o, ba);
-            learned.createDotFile("testStringOracle", "/Users/NW/Documents/Djungarian/SVPAlib/src/learning/sfa");
+//            learned.createDotFile("testStringOracle", "/Users/NW/Documents/Djungarian/SVPAlib/src/learning/sfa");
         } catch (TimeoutException e) {
             e.printStackTrace();
         }

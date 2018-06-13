@@ -8,21 +8,40 @@ import java.util.List;
 
 public interface TermInterface {
 
-    public static <P> List<CharFunc> getIdentityFunction(P preds) {
+    static List<CharFunc> getIdentityFunction() {
         List<CharFunc> termFunctions = new ArrayList<>();
         termFunctions.add(CharOffset.IDENTITY);
         return termFunctions;
     }
 
-    public static <P> List<CharFunc> getConstantFunction(P preds) {
+    static <S> List<CharFunc> getConstantFunction(List<S> output) {
         List<CharConstant> termFunctions = new ArrayList<>();
         List<CharFunc> terms = new ArrayList<>();
+        System.out.println("Generating constant function for the output: "+output);
 
-        termFunctions.add(new CharConstant('a'));
-
-        for (CharConstant c : termFunctions) {
-            terms.add((CharFunc) c);
+        if (output != null && !output.isEmpty()) {
+            for (S c : output) {
+                if (c instanceof Character) {
+                    char o = (Character) c;
+                    termFunctions.add(new CharConstant(o));
+                    break;
+                } else {
+                    // Currently not used so should not occur
+                    System.out.println("ERROR: Output not of type Character");
+                }
+            }
+        } else {
+            System.out.println("Output was null");
+            // If output == null then it is [] ?
+            // If so then we should add some constant representing the empty output...
+            // TODO: What to use for constant representing the empty output?
+            termFunctions.add(new CharConstant('C'));
         }
+
+        for (CharConstant func : termFunctions) {
+            terms.add((CharFunc) func);
+        }
+
         return terms;
     }
 }
