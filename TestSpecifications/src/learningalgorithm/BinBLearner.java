@@ -181,6 +181,20 @@ public class BinBLearner<P, S> {
             this.fill(o);
         }
 
+        public boolean getMembershipAnswer(List<S> s, Oracle<P, S> o) throws TimeoutException {
+            System.out.println("In getMembershipAnswer method!");
+            if (f.containsKey(s)) {
+                System.out.println("f contains: "+s);
+                return f.get(s);
+            } else {
+                boolean answer = o.checkMembership(s);
+                f.put(s, answer);
+                addToTable(s, o);
+                return answer;
+            }
+        }
+
+
         /**
          * Processes a counterexample which is given in the form [a, b, c, ...]
          *
@@ -191,41 +205,24 @@ public class BinBLearner<P, S> {
          * @param cx the counterexample that should be processed
          */
         public void process(List<S> cx, Oracle<P, S> o, BooleanAlgebra<P, S> ba) throws TimeoutException {
-            // TODO: Check implementation of this method
-            // Find distinguishing string d
             if (cx.size() == 1) {
                 addToTable(cx, o);
-                System.out.println(this);
             }
 
             int diff = cx.size();
             int same = 0;
-            boolean membershipAnswer;
-            if (!f.containsKey(cx)) {
-                membershipAnswer = o.checkMembership(cx);
-                f.put(cx, membershipAnswer);
-                addToTable(cx, o);
-            } else {
-                membershipAnswer = f.get(cx);
-            }
+            boolean membershipAnswer = getMembershipAnswer(cx, o);
 
             // Binary search to identify index upon which the response of the target machine
             // differs for the strings s_io z_>i0 and s_i0+1 z_>i0+1
             while((diff-same) != 1) {
                 int i = (diff + same) / 2;
                 List<S> accessString = runInHypothesis(o, ba, cx, i);
-                List<S> toAdd = new ArrayList<>();
-                for (int j=i; j<cx.size(); j++) {
-                    toAdd.add(cx.get(j));
-                }
+                List<S> toAdd = new ArrayList<>(cx.subList(i, cx.size()));
                 accessString.addAll(toAdd);
-                if (!f.containsKey(accessString)) {
-                    boolean accStringAnswer = o.checkMembership(accessString);
-                    f.put(accessString, accStringAnswer);
-                    addToTable(accessString, o);
-                    System.out.println(this);
-                }
-                if (membershipAnswer != f.get(accessString)) {
+
+                boolean accessStringAnswer = getMembershipAnswer(accessString, o);
+                if (membershipAnswer != accessStringAnswer) {
                     diff = i;
                 } else {
                     same = i;
@@ -238,25 +235,22 @@ public class BinBLearner<P, S> {
             // Check whether s_i0 b == s_j mod W U {d} for some j ±= i_0 + 1
             // b is a character from the input language
             // d is the counterexample
-            System.out.println("Wrong Transition is "+wrongTransition);
             if (!SUR.contains(wrongTransition)) {
                 // If so, then add s_i0 b to ^ (R)
                 R.add(wrongTransition);
                 SUR.add(wrongTransition);
             } else {
                 // Else, add d to W (E)
-                List<S> dist = new ArrayList<>();
-                for (int i=diff; i<cx.size(); i++) {
-                    dist.add(cx.get(i));
-                }
+                List<S> dist = new ArrayList<>(cx.subList(diff, cx.size()));
                 if (!E.contains(dist)) {
                     E.add(dist);
                 }
+
+                // Add extension for each s \in S to R.
                 for (List<S> c : this.S) {
                     List<S> toAdd = new ArrayList<>();
                     toAdd.addAll(c);
                     toAdd.addAll(dist);
-                    System.out.println("Adding "+toAdd.toString()+" to SUR (added "+dist+" to E)");
                     if (!SUR.contains(toAdd)) {
                         SUR.add(toAdd);
                         R.add(toAdd);
@@ -264,23 +258,24 @@ public class BinBLearner<P, S> {
                 }
             }
             fill(o);
-            System.out.println(this);
         }
 
         private List<S> runInHypothesis(Oracle<P, S> o, BooleanAlgebra<P, S> ba, List<S> cx, int i) throws TimeoutException {
-            this.fill(o);
+//            this.fill(o);
             SFA<P, S> hypothesis = this.buildSFA(o, ba);
             hypothesis.mkTotal(ba);
 
             int state = hypothesis.getInitialState();
-            System.out.println(hypothesis.toString());
+//            System.out.println(hypothesis.toString());
             List<S> toSimulate = new ArrayList<>(cx.subList(0, i));
-            System.out.println("toSimulate is "+toSimulate);
+//            System.out.println("toSimulate is "+toSimulate);
             for (S c : toSimulate) {
                 boolean found = false;
-                System.out.println("Number of input moves: "+hypothesis.getInputMovesFrom(state).size());
+//                System.out.println("Number of input moves: "+hypothesis.getInputMovesFrom(state).size());
+                // Do not take into account epsilon transitions?
+                // If c exists then this will never be the empty list thus it will not match an epsilon transition
                 for (SFAInputMove<P, S> trans : hypothesis.getInputMovesFrom(state)) {
-                    System.out.println("Is the guard ("+trans.guard+") satisfied by "+c+"?");
+//                    System.out.println("Is the guard ("+trans.guard+") satisfied by "+c+"?");
                     if (ba.HasModel(trans.guard, c)) {
                         found = true;
                         state = trans.to;
@@ -288,7 +283,7 @@ public class BinBLearner<P, S> {
                     }
                 }
                 if (!found) {
-                    System.out.println("AAAH stuk: kon geen matchende transitie vinden");
+                    System.out.println("AAAAH stuk: kon geen matchende transitie vinden, dit zou niet moeten gebeuren aangezien de hypothesis total moet zijn");
                 }
             }
 
