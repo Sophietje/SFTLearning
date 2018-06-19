@@ -182,9 +182,7 @@ public class BinBLearner<P, S> {
         }
 
         public boolean getMembershipAnswer(List<S> s, Oracle<P, S> o) throws TimeoutException {
-            System.out.println("In getMembershipAnswer method!");
             if (f.containsKey(s)) {
-                System.out.println("f contains: "+s);
                 return f.get(s);
             } else {
                 boolean answer = o.checkMembership(s);
@@ -261,21 +259,16 @@ public class BinBLearner<P, S> {
         }
 
         private List<S> runInHypothesis(Oracle<P, S> o, BooleanAlgebra<P, S> ba, List<S> cx, int i) throws TimeoutException {
-//            this.fill(o);
             SFA<P, S> hypothesis = this.buildSFA(o, ba);
             hypothesis.mkTotal(ba);
 
             int state = hypothesis.getInitialState();
-//            System.out.println(hypothesis.toString());
             List<S> toSimulate = new ArrayList<>(cx.subList(0, i));
-//            System.out.println("toSimulate is "+toSimulate);
             for (S c : toSimulate) {
                 boolean found = false;
-//                System.out.println("Number of input moves: "+hypothesis.getInputMovesFrom(state).size());
                 // Do not take into account epsilon transitions?
                 // If c exists then this will never be the empty list thus it will not match an epsilon transition
                 for (SFAInputMove<P, S> trans : hypothesis.getInputMovesFrom(state)) {
-//                    System.out.println("Is the guard ("+trans.guard+") satisfied by "+c+"?");
                     if (ba.HasModel(trans.guard, c)) {
                         found = true;
                         state = trans.to;
