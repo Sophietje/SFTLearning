@@ -1,3 +1,7 @@
+/**
+ * NOTICE: This file has been made by Sophie Lathouwers!
+ * @author Sophie Lathouwers
+ */
 
 import java.util.ArrayList;
 import java.util.List;

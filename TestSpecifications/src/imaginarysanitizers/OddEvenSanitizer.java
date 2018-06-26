@@ -1,3 +1,8 @@
+/**
+ * NOTICE: This file has been made by Sophie Lathouwers!
+ * @author Sophie Lathouwers
+ */
+
 package imaginarysanitizers;
 
 import com.google.common.collect.ImmutableList;

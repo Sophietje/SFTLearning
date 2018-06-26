@@ -1,3 +1,8 @@
+/**
+ * NOTICE: This file has been made by Sophie Lathouwers!
+ * @author Sophie Lathouwers
+ */
+
 package learningalgorithm;
 
 import automata.sfa.SFA;
