@@ -21,10 +21,19 @@ public class IOStringOracleBinBSFT extends SymbolicOracle<CharPred, CharFunc, Ch
     @Override
     public List<Character> checkEquivalenceImpl(SFT<CharPred, CharFunc, Character> compareTo) {
         System.out.println(compareTo);
-        System.out.println("Is that your automaton? (y/n):");
-        char in = sc.nextLine().charAt(0);
-        if (in == 'y')
+        char in = '\u0000';
+        // Ask whether the hypothesis automaton is correct
+        // This question will be repeated until valid input (either 'n' or 'y') has been given
+        while (in != 'n' && in != 'y') {
+            System.out.println("Is that your automaton? (y/n):");
+            String inLine = sc.nextLine();
+            if (inLine != null && !inLine.isEmpty() && inLine.length()==1) {
+                in = inLine.charAt(0);
+            }
+        }
+        if (in == 'y') {
             return null;
+        }
         System.out.println("Enter counterexample string a1,a2,a3... :");
         String cex = sc.nextLine();
         String[] parts = cex.split(",");
@@ -55,12 +64,6 @@ public class IOStringOracleBinBSFT extends SymbolicOracle<CharPred, CharFunc, Ch
         SFT<CharPred, CharFunc, Character> learned = null;
         try {
             learned = ell.learn(o, ba);
-            List<List<Character>> outputs = new ArrayList<>();
-            List<Character> output = new ArrayList<>();
-            output.add('a');
-            output.add('b');
-            output.add('a');
-            outputs.add(output);
 
 //            transducers.sft.SFT.backtrack(outputs, new ArrayList<Character>, learned, 3, new ArrayList<Character>, 0, ba);
 //            learned.createDotFile("testStringOracle", "/Users/NW/Documents/Djungarian/SVPAlib/src/transducers/sft");

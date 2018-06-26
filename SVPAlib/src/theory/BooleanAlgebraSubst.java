@@ -1,4 +1,7 @@
 /**
+ * NOTICE: This file has been modified by Sophie Lathouwers!
+ *
+ * Original file:
  * SVPAlib
  * theory
  * Apr 21, 2015
@@ -7,7 +10,7 @@
 package theory;
 
 import com.google.common.collect.ImmutableList;
-import jdk.nashorn.internal.ir.annotations.Immutable;
+import javafx.util.Pair;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.sat4j.specs.TimeoutException;
 import sftlearning.BinBSFTLearner;
@@ -114,8 +117,6 @@ public abstract class BooleanAlgebraSubst<P extends CharPred,F extends TermInter
 		LinkedHashMap<P, List<CharFunc>> out = new LinkedHashMap<>();
 		if(characterGroups.size()<=1){
 			out.put(True(), F.getIdentityFunction());
-
-//			out.put(True(), .call(True()));
 			return out;
 		}
 
@@ -154,37 +155,33 @@ public abstract class BooleanAlgebraSubst<P extends CharPred,F extends TermInter
 		return out;
 	}
 
-	public LinkedHashMap<P, List<CharFunc>> getSeparatingPredicatesAndTermFunctions(Map<Set<S>, List<S>> predOutputGroups, BinBSFTLearner.ObsTable ot, List<S> from, long timeout) throws TimeoutException {
+	public LinkedHashMap<P, Pair<List<CharFunc>, Integer>> getSeparatingPredicatesAndTermFunctions(Map<Set<S>, Pair<List<S>, Integer>> predOutputGroups, BinBSFTLearner.ObsTable ot, List<S> from, long timeout) throws TimeoutException {
 		// predOutputGroups is a map of evidence to output
 		// The evidence will be generalized into predicates here
 		// Also need to generate term functions based on evidence/output-relation
-		System.out.println("Generating predicates for : "+predOutputGroups.toString());
+		System.out.println(ot.toString());
 		Set<Set<S>> characterGroups = predOutputGroups.keySet();
 
-		//If there is just one bucket return true
-		LinkedHashMap<P, List<CharFunc>> out = new LinkedHashMap<>();
-		if(characterGroups.size()<=1){
-			System.out.println("There is at least one piece of evidence");
-			// There is only one piece of evidence thus there will only be ONE transition namely TRUE()
 
+		//If there is just one bucket return true
+		LinkedHashMap<P, Pair<List<CharFunc>, Integer>> out = new LinkedHashMap<>();
+		if(characterGroups.size()<=1){
+			// There is only one piece of evidence thus there will only be ONE transition namely TRUE()
 			Iterator<Set<S>> it = predOutputGroups.keySet().iterator();
 			if (it.hasNext()) {
 				Set<S> pred = it.next();
-				System.out.println("Reasoning about the predicate: "+pred);
-				List<S> output = predOutputGroups.get(pred);
+				Integer to = predOutputGroups.get(pred).getValue();
+				List<S> output = predOutputGroups.get(pred).getKey();
 				List<CharFunc> functions = new ArrayList<>();
 				int i = 0;
 				if (!pred.isEmpty()) {
 					for (S s : output) {
 						S p = pred.iterator().next();
 						// pred should consist of only one element!
-						System.out.println("Reasoning about (part of) predicate: " + p);
 						if (s.equals(p)) {
-							System.out.println("output char == " + p);
 							// If the pred = output, then we assume that we want an identity function as term generator
 							functions.addAll(F.getIdentityFunction());
 						} else {
-							System.out.println("output char != predicate");
 							// If the pred != output, then we assume that we always want to output the constant character
 							List<S> chars = new ArrayList<>();
 							chars.add(output.get(i));
@@ -193,17 +190,15 @@ public abstract class BooleanAlgebraSubst<P extends CharPred,F extends TermInter
 					}
 				} else {
 					if (output.isEmpty()) {
-						System.out.println("Predicate and output were both the empty list, assume identity function");
 						functions.addAll(F.getIdentityFunction());
 					} else {
-						System.out.println("Output was not empty, generate constant function for each char in output");
 						functions.addAll(F.getConstantFunction(output));
 					}
 				}
-				out.put(True(), functions);
+				out.put(True(), new Pair<>(functions, to));
 			} else {
 				// There was no known predicate, thus we assume the identity function
-				out.put(True(), F.getIdentityFunction());
+				out.put(True(), new Pair<>(F.getIdentityFunction(), ot.getS().indexOf(from)));
 			}
 			return out;
 		}
@@ -249,13 +244,14 @@ public abstract class BooleanAlgebraSubst<P extends CharPred,F extends TermInter
 				}
 				// Need to check whether output is generated in the same way for each atom in the predicate
 				// If not, then the predicate needs to be split into multiple transitions with different output functions
-				List<CharPred> preds = splitPredicate(ithPred, ot, fromChars);
+//				List<CharPred> preds = splitPredicate(ithPred, ot, fromChars);
 
-				for (CharPred p : preds) {
+//				for (CharPred p : ithPred) {
+					Integer to = predOutputGroups.get(pred).getValue();
 					// For each predicate that has been found, add appropriate term functions.
-					List<CharFunc> funcs = getTermFunctions(p, ot, fromChars);
-					out.put((P) p, funcs);
-				}
+					List<CharFunc> funcs = getTermFunctions(ithPred, ot, fromChars);
+					out.put((P) ithPred, new Pair<>(funcs, to));
+//				}
 			} else {
 				// Large predicate either needs to output identity function or one constant character
 				// How to know which one you need to output?
@@ -272,12 +268,20 @@ public abstract class BooleanAlgebraSubst<P extends CharPred,F extends TermInter
 				}
 				// Need to check whether output is generated in the same way for each atom in the predicate
 				// If not, then the predicate needs to be split into multiple transitions with different output functions
-				List<CharPred> preds = splitPredicate(largePred, ot, fromChars);
+				List<CharPred> preds = new ArrayList<>();
+				if (largePred.intervals.size()>=1) {
+					preds = splitPredicate(largePred, ot, fromChars);
+				} else {
+					preds.add(largePred);
+				}
 
 				for (CharPred p : preds) {
-					// For each predicate that has been found, add appropriate term functions.
-					List<CharFunc> funcs = getTermFunctions(p, ot, fromChars);
-					out.put((P) p, funcs);
+					for (CharPred pr : splitPredicate(p, ot, fromChars)) {
+						Integer to = predOutputGroups.get(pred).getValue();
+						// For each predicate that has been found, add appropriate term functions.
+						List<CharFunc> funcs = getTermFunctions(pr, ot, fromChars);
+						out.put((P) pr, new Pair<>(funcs, to));
+					}
 				}
 			}
 		}
@@ -285,32 +289,60 @@ public abstract class BooleanAlgebraSubst<P extends CharPred,F extends TermInter
 		return out;
 	}
 
-	private List<CharFunc> getTermFunctions(CharPred p, BinBSFTLearner.ObsTable ot, List<Character> from) {
+	private List<CharFunc> getTermFunctions(CharPred p, BinBSFTLearner.ObsTable ot, List<Character> from) throws TimeoutException {
 		List<CharFunc> functions = new ArrayList<>();
+		// If there are two inputs in f, for which p is true AND the outputs are DIFFERENT CONSTANTS
+		// Then we need to split this predicate!
+
+
 		// I need some word such that its extension satisfies predicate p
 		List<List<Character>> words = ot.getSUR();
+		boolean foundWord = false;
+//		int x = 0;
 		for (List<Character> word : words) {
 			if (isPrefix(from, word)) {
 				Character extension = word.get(word.size()-1);
 				if (p.isSatisfiedBy(extension)) {
 					// Then deduce the term functions from the relation between predicate p and output on word w
-					Map<List<Character>, List<Character>> f = ot.getF();
-					List<Character> completeOutput = f.get(word);
-					List<Character> outputFrom = f.get(from);
+					Map<List<Character>, Pair<List<Character>, List<CharFunc>>> f = ot.getF();
+					List<Character> completeOutput = f.get(word).getKey();
+					List<Character> outputFrom = f.get(from).getKey();
 					// output contains the value produced upon recognizing the extension
 					List<Character> output = new ArrayList<>();
 					for (int i=outputFrom.size(); i<completeOutput.size(); i++) {
 						output.add(completeOutput.get(i));
 					}
-					// Establish the functions based on relation between predicate p and output
-					for (Character c : output) {
-						if (c.equals(extension)) {
-							functions.add(CharOffset.IDENTITY);
-						} else {
-							functions.add(new CharConstant(c));
+//					if (x == 0) {
+						// Establish the functions based on relation between predicate p and output
+						for (Character c : output) {
+							if (c.equals(extension)) {
+								functions.add(CharOffset.IDENTITY);
+							} else {
+								functions.add(new CharConstant(c));
+							}
+							foundWord = true;
+
+							// TODO: Look into the following: I should split the predicate if there are two words for which the output functions are both constant but with a different constant
+							// TODO: In that case the predicate should be split and the term functions should be constantA and constantB respectively
 						}
-					}
+//						x++;
+//					} else {
+//						for (int i=0; i<output.size(); i++) {
+//							if ((output.get(i).equals(extension) && !functions.get(i).equals(CharOffset.IDENTITY))
+//								|| (!output.get(i).equals(extension) && !functions.get(i).equals(new CharConstant(output.get(i))))) {
+//								// Functions are different so the predicate needs to be split!
+//								List<CharPred> preds = splitPredicate(p, ot, from);
+//								for (CharPred p : preds) {
+//
+//								}
+//							}
+//						}
+//
+//					}
 				}
+			}
+			if (foundWord) {
+				return functions;
 			}
 		}
 		return functions;
@@ -325,9 +357,11 @@ public abstract class BooleanAlgebraSubst<P extends CharPred,F extends TermInter
 	 * @return list of predicates
 	 */
 	private List<CharPred> splitPredicate(CharPred ithPred, BinBSFTLearner.ObsTable ot, List<Character> from) throws TimeoutException {
-		if (ithPred == False()) {
+		if (ithPred.equals(False())) {
 			return new ArrayList<>();
 		}
+
+		System.out.println("SPLITTING THE PREDICATE: "+ithPred);
 
 		List<List<Character>> words = ot.getSUR();
 		List<CharPred> result = new ArrayList<>();
@@ -339,22 +373,16 @@ public abstract class BooleanAlgebraSubst<P extends CharPred,F extends TermInter
 		List<CharFunc> functions = new ArrayList<>();
 		for (List<Character> word : words) {
 			// Check whether the word is a one-step extension of the 'from'/origin state
-			System.out.println("Checking whether "+from+" is a prefix of "+word);
-			if (isPrefix(from, word)) {
+			if (isPrefix(from, word) && !isSplit) {
 				Character extension = word.get(word.size()-1);
 				// And if so, and the last character satisfies the predicate
-				if (ithPred.isSatisfiedBy(extension)) {
+				if (ithPred.isSatisfiedBy(extension) && !isSplit) {
+					System.out.println("Predicate "+ithPred+" is satisfied by "+extension);
 					// Then we need to check whether the predicate needs to be split into multiple predicates
 					// TODO: check whether we can look up correct value in table for (word + [])
 					// Find value in table:
-					Map<List<Character>, List<Character>> f = ot.getF();
-					List<Character> completeOutput = f.get(word);
-					List<Character> outputFrom = f.get(from);
-					// output contains the value produced upon recognizing the extension
-					List<Character> output = new ArrayList<>();
-					for (int i=outputFrom.size(); i<completeOutput.size(); i++) {
-						output.add(completeOutput.get(i));
-					}
+					Map<List<Character>, Pair<List<Character>, List<CharFunc>>> f = ot.getF();
+					List<Character> output = f.get(word).getKey();
 
 					if (index == 0) {
 						// Cannot split before first character
@@ -368,31 +396,27 @@ public abstract class BooleanAlgebraSubst<P extends CharPred,F extends TermInter
 						}
 						index++;
 					} else {
-						// First need to check whether I even need to split this predicate
-						// Predicate which we are reasoning about is ithPred
-						// for all characters satisfying ithPred
-						// we need to check whether they provide a different set of functions
-						ImmutableList<ImmutablePair<Character, Character>> intervals = ithPred.intervals;
-						for (ImmutablePair<Character, Character> subPred : intervals) {
+						boolean sameFunctions = true;
+						int i=0;
+						for (Character c : output) {
+							if ((c.equals(extension) && !functions.get(i).equals(CharOffset.IDENTITY))
+									|| (!c.equals(extension) && !functions.get(i).equals(new CharConstant(c)))) {
+								sameFunctions = false;
+							}
+							i++;
+						}
+						for (ImmutablePair<Character, Character> subPred : ithPred.intervals) {
+							System.out.println("Considering the following interval: "+subPred);
 							CharPred pr = new CharPred(subPred.getLeft(), subPred.getRight());
-							// If THIS sub-predicate is satisfied by the input and if the predicate has not yet been split
-							if (!isSplit && pr.isSatisfiedBy(extension)) {
-								Character current = subPred.getLeft();
-								Character previous = null;
-								boolean sameFunctions = true;
-								while (current <= subPred.getRight() && !isSplit) {
-									// Check whether current character has same term functions
-									int i = 0;
-									for (Character c : output) {
-										if ((c.equals(extension) && (!functions.get(i).equals(CharOffset.IDENTITY) || !functions.get(i).equals(new CharConstant(c)))) || (!c.equals(extension) && !functions.get(i).equals(new CharConstant(c)))) {
-											// Wrong term function, thus need to split this predicate!
-											sameFunctions = false;
-										}
-									}
-
+							// Need to find the specific interval in the predicate that needs to be split
+							if (pr.isSatisfiedBy(extension) && !isSplit) {
+								Character current = extension;
+								Character previous = current;
+								previous--;
+								if (current > subPred.getLeft()) {
 									if (!sameFunctions) {
-										// Need to split the predicate on this character
-										// Split into [left, current-1] and [current, right]
+										// Need to split the predicate on this character (extension)
+										// Split into [left, current] and [current+1, right]
 										P before = (P) new CharPred(subPred.getLeft(), previous);
 										P after = (P) new CharPred(current, subPred.getRight());
 										isSplit = true;
@@ -401,9 +425,14 @@ public abstract class BooleanAlgebraSubst<P extends CharPred,F extends TermInter
 										left = MkOr((P) left, before);
 										// after needs to be added to the predicate with all next intervals
 										right = MkOr((P) right, after);
+										System.out.println("=====-----=====-----=====");
+										System.out.println("Before: "+before);
+										System.out.println("After: "+after);
+										System.out.println(left+" --- "+right);
+										System.out.println("=====-----=====-----=====");
 
 										// Make sure that all following intervals are added to the [current, right] predicate
-									} else if (current == subPred.getRight()) {
+									} else {
 										// It has not yet been split
 										// However the split may happen in the rest of the interval
 										// If the term functions are the same for all chars in subPred, i.e. if this is the last character
@@ -412,32 +441,55 @@ public abstract class BooleanAlgebraSubst<P extends CharPred,F extends TermInter
 										// All functions were the same therefore the predicate does not need to be split
 										left = MkOr((P) left, (P) pr);
 									}
-									i++;
-									previous = current;
-									current++;
+								} else if (current.equals(subPred.getLeft())) {
+									left = MkOr((P) left, (P) new CharPred(subPred.getLeft(), subPred.getLeft()));
+									Character split = subPred.getLeft();
+									split++;
+									right = MkOr((P) right, (P) new CharPred(split, subPred.getRight()));
+									System.out.println("§§§§§§§§§§§§§§§§§§§§");
+									System.out.println("Before: "+subPred.getLeft());
+									System.out.println("After: "+split);
+									System.out.println(left+" --- "+right);
+									System.out.println("§§§§§§§§§§§§§§§§§§§§");
+								} else {
+									System.out.println("ERROR: current < subPred.left!");
 								}
-							} else if (!isSplit && !pr.isSatisfiedBy(extension)) {
-								// This predicate is not satisfied by the input thus it is not the predicate that should be split
-								// Therefore this should be part of the predicate representing everything before the split
+							} else if (!pr.isSatisfiedBy(extension) && !isSplit) {
 								left = MkOr((P) left, (P) pr);
-							} else {
-								// The predicate has been split, therefore all following intervals are combined
-								// Therefore this sub-predicate should become part of the predicate representing everything after the split
-								right = MkOr((P) left, (P) new CharPred(subPred.getLeft(), subPred.getRight()));
+							} else if (isSplit) {
+								right = MkOr((P) right, (P) pr);
 							}
 						}
 					}
 				}
 			}
-
+			if (isSplit) {
+				break;
+			}
 		}
 
-		result.add(left);
+		if (left.equals(False()) && right.equals(False())) {
+			result.add(ithPred);
+			return result;
+		}
+
+		System.out.println("After splitting the left predicate is "+left);
+		System.out.println("After splitting the right predicate is "+right);
+		if (left.equals(ithPred)) {
+			// If the left predicate is equal to the original predicate, then it did not need to be split!
+			result.add(left);
+			return result;
+		}
 		// Call splitPredicate recursively on the predicate representing everything after the split
+		List<CharPred> predsLeft = splitPredicate(left, ot, from);
+		for (CharPred p : predsLeft) {
+			result.add(p);
+		}
 		List<CharPred> preds = splitPredicate(right, ot, from);
 		for (CharPred p : preds) {
 			result.add(p);
 		}
+		System.out.println("Final result: "+result);
 		return result;
 	}
 

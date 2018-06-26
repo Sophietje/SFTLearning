@@ -1,14 +1,17 @@
+/**
+ * NOTICE: This file has been made by Sophie Lathouwers!
+ * @author Sophie Lathouwers
+ */
+
 package sftlearning;
 
-import com.google.common.collect.ImmutableList;
+import javafx.util.Pair;
 import org.sat4j.specs.TimeoutException;
 import theory.BooleanAlgebraSubst;
-import theory.characters.CharConstant;
-import theory.characters.CharOffset;
+import theory.characters.CharFunc;
 import theory.characters.CharPred;
 import theory.characters.TermInterface;
 import transducers.sft.SFT;
-import transducers.sft.SFTEpsilon;
 import transducers.sft.SFTInputMove;
 import transducers.sft.SFTMove;
 
@@ -46,11 +49,19 @@ public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
         }
     }
 
-    public SFT<P, F, S> learn(SymbolicOracle<P, F, S> o, BooleanAlgebraSubst<P, F, S> ba) throws TimeoutException {
+    /**
+     * Method that should be called when you want to learn a SFT
+     *
+     * @param o symbolic oracle of the system under learning (SUL)
+     * @param ba boolean algebra of the SFT
+     * @return hypothesis automaton that describes the behaviour of the SUL.
+     * @throws TimeoutException
+     */
+    public SFT<P, F, S> learn(SymbolicOracle<P, F, S> o, BooleanAlgebraSubst<P, CharFunc, S> ba) throws TimeoutException {
         // Initialize variables: table, conjecture, cx (counterexample)
         ObsTable table = new ObsTable(ba.generateWitness(ba.True()));
-        SFT<P, F, S> conjecture = null;
-        List<S> cx = null;
+        SFT<P, F, S> conjecture;
+        List<S> cx;
 
         // While no equivalent hypothesis automaton has been found
         table.fill(o);
@@ -87,7 +98,7 @@ public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
      */
     public class ObsTable {
         private List<List<S>> S, R, E, SUR;
-        private Map<List<S>, List<S>> f;
+        private Map<List<S>, Pair<List<S>, List<FunctionType>>> f;
         private S arbchar;
 
         /**
@@ -99,19 +110,13 @@ public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
             R = new ArrayList<List<S>>();
             SUR = new ArrayList<List<S>>();
             E = new ArrayList<List<S>>();
-            f = new HashMap<List<S>, List<S>>();
+            f = new HashMap<List<S>, Pair<List<S>, List<FunctionType>>>();
             this.arbchar = arbchar;
 
             // Add 'empty' / epsilon (S = {e})
             S.add(new ArrayList<S>());
             // Add S  = {e} to SUR so that SUR = {e}
             SUR.add(new ArrayList<S>());
-//            List<S> r = new ArrayList<S>();
-//            r.add(arbchar);
-            // Add a (R = {a})
-//            R.add(r);
-            // S U R = {e} U {a} = {e, a}
-//            SUR.add(r);
             // Add 'empty' / epsilon (E = {e})
             E.add(new ArrayList<S>());
         }
@@ -142,19 +147,30 @@ public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
         //assumes isPrefix(w, we)
         private List<S> getSuffix(List<S> w, List<S> we) {
             List<S> suffix = new ArrayList<S>();
-            for (int k = w.size(); k < we.size(); k++)
+            for (int k = w.size(); k < we.size(); k++) {
                 suffix.add(we.get(k));
+            }
             return suffix;
         }
 
+        /**
+         * Add input cx to the symbolic observation table
+         * It will add cx to S if there is no similar row in S, otherwise it will be added to R.
+         *
+         * @param cx word that should be added to the table
+         * @param o symbolic oracle of system under learning
+         * @throws TimeoutException
+         */
         public void addToTable(List<S> cx, SymbolicOracle o) throws TimeoutException {
             this.fill(o);
+            // If the table does not yet contain the given input,
+            // Add it to R if there is a similar row in S, otherwise add to S.
             if (!SUR.contains(cx)) {
                 this.SUR.add(cx);
                 this.fill(o);
                 boolean similarRow = false;
                 for (List<S> s : this.S) {
-                    if (row(s).equals(row(cx))) {
+                    if (getFunctionRow(s).equals(getFunctionRow(cx))) {
                         similarRow = true;
                         break;
                     }
@@ -165,11 +181,13 @@ public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
                 } else {
                     this.S.add(cx);
                 }
+            // If the table already contains the given input, then it must be in either S or R.
+            // We need to move it to S if S does not contain a similar row.
             } else {
                 if (R.contains(cx)) {
                     boolean similarRow = false;
                     for (List<S> s : this.S) {
-                        if (row(s).equals(row(cx))) {
+                        if (getFunctionRow(s).equals(getFunctionRow(cx))) {
                             similarRow = true;
                             break;
                         }
@@ -180,8 +198,114 @@ public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
                     }
                 }
             }
+            // Fill out any missing entries in the table
             this.fill(o);
         }
+
+        /**
+         * Returns the longest prefix that is already in the symbolic observation table
+         * @param s input from which we want the longest prefix that is in the table
+         * @return the longest prefix of s that is in the symbolic observation table
+         */
+        public List<S> getLongestPrefixInTable(List<S> s) {
+            for (int i=s.size()-1; i>=0; i--) {
+                if (f.containsKey(getList(s, 0, i))) {
+                    return new ArrayList<>(getList(s, 0, i));
+                }
+            }
+            return new ArrayList<>();
+        }
+
+        /**
+         * Get the output and output functions upon the input s from the System Under Learning (SUL)
+         * @param s input word
+         * @param o oracle of the system under learning
+         * @return (output, output functions) upon given input s
+         * @throws TimeoutException
+         */
+        public Pair<List<S>, List<FunctionType>> getOutputPair(List<S> s, SymbolicOracle<P, F, S> o) throws TimeoutException {
+            List<S> answer = o.checkMembership(s);
+            List<S> prefix = getLongestPrefixInTable(s);
+
+            if (s.isEmpty() || prefix == null || f.get(prefix) == null) {
+                if (!f.containsKey(s)) {
+                    ArrayList<FunctionType> functionTypes = new ArrayList<>();
+                    if (!answer.isEmpty()) {
+                        functionTypes.add(FunctionType.CONSTANT);
+                    } else {
+                        functionTypes.add(FunctionType.IDENTITY);
+                    }
+                    Pair<List<S>, List<FunctionType>> pair = new Pair<>(answer, functionTypes);
+                    f.put(s, pair);
+                    addToTable(s, o);
+                    return pair;
+                }
+            }
+
+            List<S> prefixAnswer = f.get(prefix).getKey();
+            List<S> suffix = new ArrayList<>();
+            if (isPrefix(prefixAnswer, answer)) {
+                suffix = getSuffix(prefixAnswer, answer);
+                if (suffix.isEmpty()) {
+                    List<FunctionType> function = new ArrayList<>();
+                    function.add(FunctionType.CONSTANT);
+                    return new Pair<>(answer, function);
+                }
+            }
+
+            List<FunctionType> functions = new ArrayList<>();
+            for (int i=0; i<suffix.size(); i++) {
+                // Make sure to look at the last character of the input if input.size() < output.size()
+                int index = -1;
+                if (prefixAnswer.size()+i > s.size()-1) {
+                    index = s.size()-1;
+                } else {
+                    index = prefixAnswer.size() + i;
+                }
+                if (suffix.get(i).equals(s.get(index))) {
+                    functions.add(FunctionType.IDENTITY);
+                } else {
+                    functions.add(FunctionType.CONSTANT);
+                }
+            }
+            return new Pair<>(answer, functions);
+        }
+
+        /**
+         * Returns a new list with the elements s_begin, ..., s_end-1 from s
+         * @param s list
+         * @param begin begin index
+         * @param end end index
+         * @return list with the element s_begin, ..., s_end-1
+         */
+        private List<S> getList(List<S> s, int begin, int end) {
+            List<S> result = new ArrayList<>();
+            for (int i=begin; i<end && i<s.size(); i++) {
+                result.add(s.get(i));
+            }
+            return result;
+        }
+
+        /**
+         * Returns the answer for a given string
+         *
+         * @param s input string
+         * @param o oracle to pose membership query to
+         * @return a pair of which the first element contains the output and the second element contains the term functions
+         * @throws TimeoutException
+         */
+        public Pair<List<S>, List<FunctionType>> getMembershipAnswer(List<S> s, SymbolicOracle<P, F, S> o) throws TimeoutException {
+            // If the membership answer is already known (cached), look it up in the table (f)
+            if (f.containsKey(s)) {
+                return f.get(s);
+            } else {
+                // Otherwise, pose membership query and store results
+                Pair<List<S>, List<FunctionType>> pair = getOutputPair(s, o);
+                f.put(s, pair);
+                return pair;
+            }
+        }
+
 
         /**
          * Processes a counterexample which is given in the form [a, b, c, ...]
@@ -192,42 +316,25 @@ public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
          * TODO: Can be optimized (see back in black paper) by making sure to keep the table reduced
          * @param cx the counterexample that should be processed
          */
-        public void process(List<S> cx, SymbolicOracle o, BooleanAlgebraSubst ba) throws TimeoutException {
-            // TODO: Check implementation of this method
-            // Find distinguishing string d
+        public void process(List<S> cx, SymbolicOracle<P, F, S> o, BooleanAlgebraSubst<P, CharFunc, S> ba) throws TimeoutException {
             if (cx.size() == 1) {
                 addToTable(cx, o);
-                System.out.println(this);
             }
 
             int diff = cx.size();
             int same = 0;
-            List<S> membershipAnswer;
-            if (!f.containsKey(cx)) {
-                membershipAnswer = o.checkMembership(cx);
-                f.put(cx, membershipAnswer);
-                addToTable(cx, o);
-            } else {
-                membershipAnswer = f.get(cx);
-            }
+            List<FunctionType> membershipAnswer = getMembershipAnswer(cx, o).getValue();
 
             // Binary search to identify index upon which the response of the target machine
             // differs for the strings s_io z_>i0 and s_i0+1 z_>i0+1
             while((diff-same) != 1) {
                 int i = (diff + same) / 2;
                 List<S> accessString = runInHypothesis(o, ba, cx, i);
-                List<S> toAdd = new ArrayList<>();
-                for (int j=i; j<cx.size(); j++) {
-                    toAdd.add(cx.get(j));
-                }
+                List<S> toAdd = new ArrayList<>(getList(cx, i, cx.size()));
                 accessString.addAll(toAdd);
-                if (!f.containsKey(accessString)) {
-                    List<S> accStringAnswer = o.checkMembership(accessString);
-                    f.put(accessString, accStringAnswer);
-                    addToTable(accessString, o);
-                    System.out.println(this);
-                }
-                if (membershipAnswer != f.get(accessString)) {
+
+                List<FunctionType> accessStringAnswer = getMembershipAnswer(accessString, o).getValue();
+                if (!membershipAnswer.equals(accessStringAnswer)) {
                     diff = i;
                 } else {
                     same = i;
@@ -242,38 +349,40 @@ public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
             // d is the counterexample
             if (!SUR.contains(wrongTransition)) {
                 // If so, then add s_i0 b to ^ (R)
-                R.add(wrongTransition);
-                SUR.add(wrongTransition);
+                addToTable(wrongTransition, o);
             } else {
                 // Else, add d to W (E)
-                List<S> dist = new ArrayList<>();
-                for (int i=diff; i<cx.size(); i++) {
-                    dist.add(cx.get(i));
-                }
+                List<S> dist = new ArrayList<>(getList(cx, diff, cx.size()));
                 if (!E.contains(dist)) {
                     E.add(dist);
                 }
-                for (List<S> c : this.S) {
+                for (List<S> c : new ArrayList<>(S)) {
                     List<S> toAdd = new ArrayList<>();
                     toAdd.addAll(c);
                     toAdd.addAll(dist);
-                    if (!SUR.contains(toAdd)) {
-                        SUR.add(toAdd);
-                        R.add(toAdd);
-                    }
+                    addToTable(toAdd, o);
                 }
             }
             fill(o);
-            System.out.println(this);
         }
 
-        private List<S> runInHypothesis(SymbolicOracle o, BooleanAlgebraSubst ba, List<S> cx, int i) throws TimeoutException {
+        /**
+         * Returns the output upon simulating the input cx for i steps in the hypothesis automaton
+         *
+         * @param o oracle which can answer membership queries
+         * @param ba boolean algebra of the hypothesis automaton
+         * @param cx input which will be simulated
+         * @param i number of steps that input should be simulated
+         * @return Output that is produced upon simulating the input cx for i steps in the hypothesis automaton
+         * @throws TimeoutException
+         */
+        private List<S> runInHypothesis(SymbolicOracle<P, F, S> o, BooleanAlgebraSubst<P, CharFunc, S> ba, List<S> cx, int i) throws TimeoutException {
             this.fill(o);
             SFT<P, F, S> hypothesis = this.buildSFT(o, ba);
 
             int state = hypothesis.getInitialState();
             System.out.println(hypothesis.toString());
-            List<S> toSimulate = new ArrayList<>(cx.subList(0, i));
+            List<S> toSimulate = new ArrayList<>(getList(cx, 0, i));
             for (S c : toSimulate) {
                 boolean found = false;
                 for (SFTInputMove<P, F, S> trans : hypothesis.getInputMovesFrom(state)) {
@@ -285,6 +394,7 @@ public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
                 }
                 if (!found) {
                     // TODO: Vind cases waarin dit gebeurt en go fix!
+                    // Komt door SFT die incomplete/not total is?
                     System.out.println("AAAH stuk: kon geen matchende transitie vinden");
                 }
             }
@@ -293,77 +403,62 @@ public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
             // Zoek de corresponding row in S op en return deze
             // Ik zoek de access string voor "state" -> find row(state) = row(cx.subList(0,i))?
             // Then find row equal to row(cx.subList(0,i)) in S
+            // Note that individual states are now identified by their FUNCTION row instead of the output
             List<S> index = this.S.get(state);
             return new ArrayList<>(index);
-//            return hypothesis.outputOn(new ArrayList<>(cx.subList(0, i)), ba);
         }
 
-        private SFT<P, F, S> buildSFT(SymbolicOracle o, BooleanAlgebraSubst ba) throws TimeoutException {
+        private SFT<P, F, S> buildSFT(SymbolicOracle<P, F, S> o, BooleanAlgebraSubst<P, CharFunc, S> ba) throws TimeoutException {
             // Define a state for each s in S
             // Set initial state to q_epsilon
             // Make state final if T(s, epsilon) = 1
             // Make transitions, guard(q_s) should return pair (g, q)
             // which means that we add the transitions q_s --- g ---> q
-            Map<List<List<S>>, Map<List<List<S>>, Set<S>>> transitions = new HashMap<>();
+            Map<List<List<FunctionType>>, Map<List<List<FunctionType>>, Set<S>>> transitions = new HashMap<>();
             for (List<S> from : S) {
-                Map<List<List<S>>, Set<S>> temp = new HashMap<>();
+                Map<List<List<FunctionType>>, Set<S>> temp = new HashMap<>();
                 for (List<S> to : S) {
-                    temp.put(row(to), new HashSet<>());
+                    temp.put(getFunctionRow(to), new HashSet<>());
                 }
                 // Make "empty" transitions between all states
-                transitions.put(row(from), temp);
+                transitions.put(getFunctionRow(from), temp);
             }
 
             for (List<S> from : SUR) {
                 for (List<S> to : SUR) {
                     if (to.size() != from.size() + 1 || !isPrefix(from, to))
                         continue;
+                    // If to is a one-step extension of from then we need to construct a transition from ---> to
+                    // Evidence of this transition is the one-step extension
                     S evid = to.get(to.size() - 1);
                     // Add the following transition: q_from ---evid---> q_to
-                    transitions.get(row(from)).get(row(to)).add(evid);
+                    transitions.get(getFunctionRow(from)).get(getFunctionRow(to)).add(evid);
                 }
             }
 
             //now generalize the evidence into predicates
-            List<SFTMove<P, F, S>> moves = new ArrayList<>();
+            List<SFTMove<P, CharFunc, S>> moves = new ArrayList<>();
             for (int i = 0; i < S.size(); i++) {
                 //sb is the state from which we will add transitions
-                List<List<S>> sb = row(S.get(i));
-                Map<Set<S>, List<S>> groups = new HashMap<>();
-                int j=0;
-                for (List<S> sp : S) {
+                List<List<FunctionType>> sb = getFunctionRow(S.get(i));
+                Map<Set<S>, Pair<List<S>, Integer>> groups = new HashMap<>();
+                for (int j=0; j < S.size(); j++) {
                     // sp is the state to which we 'move'
-                    System.out.println("Added to groups: "+transitions.get(sb).get(row(sp))+" with output "+f.get(S.get(i)));
-                    groups.put(transitions.get(sb).get(row(sp)), f.get(S.get(i)));
+                    List<S> sp = S.get(j);
+//                    System.out.println("Add to groups: ("+transitions.get(sb).get(getFunctionRow(sp))+" ,output="+getFunctionRow(sp)+" ,to="+j+")");
+                    groups.put(transitions.get(sb).get(getFunctionRow(sp)), new Pair<>(f.get(S.get(i)).getKey(), j));
                 }
                 // sepPreds is a list of Predicates which are mapped to corresponding term functions
-                LinkedHashMap<P, List<F>> sepPreds = ba.getSeparatingPredicatesAndTermFunctions(groups, this, S.get(i), Long.MAX_VALUE);
-                System.out.println("Predicates with terms: "+sepPreds);
-                int index = 0;
+                LinkedHashMap<P, Pair<List<CharFunc>, Integer>> sepPreds = ba.getSeparatingPredicatesAndTermFunctions(groups, this, S.get(i), Long.MAX_VALUE);
+
                 for (P key : sepPreds.keySet()) {
-                    System.out.println("Current set of transitions: "+moves);
-                    System.out.println("Adding ("+i+") ---- "+key+" / "+sepPreds.get(key)+" ----> ("+index+")");
                     // Cannot simply assume i will be next state because we can have multiple transitions from i to j with different predicates
                     // Add the transition i---pred_j (key) / terms_j (sepPreds.get(key)) ---> j (index)
 
-                    System.out.println("Checking whether predicate is []");
-                    if (key == null || key.intervals == null || key.intervals.isEmpty() || key.intervals.get(0) == null) {
-                        System.out.println("Predicate is epsilon");
-                        List<S> output = new ArrayList<>();
-                        for (F f : sepPreds.get(key)) {
-                            if (f instanceof CharConstant) {
-                                output.add((S) (Character) ((CharConstant) f).c);
-                            }
-                        }
-                        moves.add(new SFTEpsilon<P, F, S>(i, index, output));
-//                        moves.add(new SFTEpsilon<P, F, S>(i, index, sepPreds.get(key)));
+                    if (key != null && key.intervals != null && !key.intervals.isEmpty() && key.intervals.get(0) != null) {
+                        moves.add(new SFTInputMove<>(i, sepPreds.get(key).getValue(), key, sepPreds.get(key).getKey()));
                     }
-
-                    moves.add(new SFTInputMove<>(i, index, key, sepPreds.get(key)));
-                    index++;
                 }
-                System.out.println("Set of transitions after adding: "+moves);
-
             }
 
             //build and return the SFA
@@ -373,51 +468,55 @@ public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
             for (int i = 0; i < S.size(); i++) {
                 // Add state i to final states if f(i) = true
                 // TODO: For now we assume that all states are accepting
+                // TODO: In reality all rows for which the first column (extension = []) is accepting, should be an accepting state
                 fin.put(i, new HashSet<>());
             }
             SFT ret = SFT.MkSFT(moves, init, fin, ba);
             return ret;
-
-            //return SFA.MkSFA(moves, init, fin, ba);
         }
 
-        private void fill(SymbolicOracle o) throws TimeoutException {
+        /**
+         * Fills missing entries in the symbolic observation table (f)
+         * @param o Symbolic oracle which is used to ask membership queries when necessary
+         * @throws TimeoutException
+         */
+        private void fill(SymbolicOracle<P, F, S> o) throws TimeoutException {
             for (List<S> w : SUR) {
                 for (List<S> e : E) {
-                    List<S> we = new ArrayList<S>(w);
+                    List<S> we = new ArrayList<>(w);
                     we.addAll(e);
                     if (!f.containsKey(we) || f.get(we) == null) {
-                        List<S> value = o.checkMembership(we);
-                        f.put(we, value);
+                        Pair<List<S>, List<FunctionType>> outputPair = getOutputPair(we, o);
+                        f.put(we, outputPair);
                     }
                 }
             }
-            System.out.println(this);
         }
 
         /**
          * Checks whether the table is closed
+         * This should happen according to the FUNCTION ROWS instead of the output!
          *
          * @return False if the table is closed, true if the table was changed
          */
         private boolean close() {
-            Set<List<List<S>>> rowsS = new HashSet<>();
+            Set<List<List<FunctionType>>> rowsS = new HashSet<>();
             List<S> best_r = null;
 
             for (List<S> s : this.S) {
-                // Construct set containing all rows from the observation table corresponding to a word in S
-                rowsS.add(row(s));
+                // Construct set containing all function rows from the observation table corresponding to a word in S
+                rowsS.add(getFunctionRow(s));
             }
 
             Set<List<List<S>>> rowsR = new HashSet<>();
             for (List<S> r : this.R) {
-                // Check whether there is a row in R that is not in S
-                if (!rowsS.contains(row(r))) {
+                // Check whether there is a function row in R that is not in S
+                if (!rowsS.contains(getFunctionRow(r))) {
                     //for membership query efficiency,
                     //instead of just moving r to S, move the shortest r' with row(r) = row(r')
                     best_r = r;
                     for (List<S> rp : R) {
-                        if (!row(r).equals(row(rp)))
+                        if (!getFunctionRow(r).equals(getFunctionRow(rp)))
                             continue;
                         if (r.equals(rp))
                             continue;
@@ -460,72 +559,77 @@ public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
             return true;
         }
 
+
+        //--------------------------------------------
+        //           GET ROWS FROM TABLE
+        //--------------------------------------------
+
         /**
-         * Returns the row in the observation table corresponding to w
-         * @param w
-         * @return
+         * Returns the row, containing all output, corresponding to w in the observation table
+         *
+         * @param w input word
+         * @return the output row corresponding to word w
          */
-        public List<List<S>> row(List<S> w) {
-            return row(w, null);
+        public List<List<S>> getOutputRow(List<S> w) {
+            return getOutputRow(w, null);
         }
 
         /**
-         * Returns the row in the observation table corresponding to w, while ignoring the characters in ignore
-         * @param w
-         * @param ignore
-         * @return
+         * Returns the row, containing all output, corresponding to w in the observation table
+         * It ignores all characters that are in ignore
+         *
+         * @param w input word
+         * @param ignore columns that should be ignored
+         * @return the output row corresponding to word w
          */
-        public List<List<S>> row(List<S> w, List<S> ignore) {
+        public List<List<S>> getOutputRow(List<S> w, List<S> ignore) {
             List<List<S>> ret = new ArrayList<>();
             for(List<S> e : E) {
-                if (ignore != null && ignore.equals(e))
+                if (ignore != null && ignore.equals(e)) {
                     continue;
-                List<S> we = new ArrayList<S>(w);
+                }
+                List<S> we = new ArrayList<>(w);
                 we.addAll(e);
-                ret.add(f.get(we)); //assumes f.containsKey(we)
+                ret.add(f.get(we).getKey()); //assumes f.containsKey(we)!!
             }
             return ret;
         }
 
-        public String toString() {
-            String ret = "E:";
-            for (List<S> w : E) ret += " " + w;
-            ret += "\nS:\n";
-            for (List<S> w : S) {
-                ret += " " + w + " :";
-                for (List<S> e : E) {
-                    List<S> we = new ArrayList<S>(w);
-                    we.addAll(e);
-                    if (f.containsKey(we)) {
-                        if (f.get(we).isEmpty()) {
-                            ret += "[]";
-                        } else {
-                            ret += f.get(we);
-                        }
-                    }
-                    else ret += "  ";
+        /**
+         * Returns the row, containing all term/output functions, corresponding to w in the observation table
+         *
+         * @param w input word
+         * @return the function row corresponding to word w
+         */
+        public List<List<FunctionType>> getFunctionRow(List<S> w) {
+            return getFunctionRow(w, null);
+        }
+
+        /**
+         * Returns the row, containing all term/output functions, corresponding to w in the observation table
+         * It ignores all characters that are in ignore
+         *
+         * @param w input word
+         * @param ignore columns that should be ignored
+         * @return the function row corresponding to word w
+         */
+        public List<List<FunctionType>> getFunctionRow(List<S> w, List<S> ignore) {
+            List<List<FunctionType>> ret = new ArrayList<>();
+            for (List<S> e : E) {
+                if (ignore != null && ignore.equals(e)) {
+                    continue;
                 }
-                ret += "\n";
-            }
-            ret += "R:";
-            for (List<S> w : R) {
-                ret += "\n " + w + " :";
-                for (List<S> e : E) {
-                    List<S> we = new ArrayList<S>(w);
-                    we.addAll(e);
-                    if (f.containsKey(we)) {
-                        if (f.get(we).isEmpty()) {
-                            ret += "[]";
-                        } else {
-                            ret += f.get(we);
-                        }
-                    }
-                    else ret += "  ";
-                }
+                List<S> we = new ArrayList<>(w);
+                we.addAll(e);
+                ret.add(f.get(we).getValue()); // assumes f.get(we)!!
             }
             return ret;
         }
 
+
+        //--------------------------------------------
+        //                  GETTERS
+        //--------------------------------------------
         public List<List<S>> getS() {
             return S;
         }
@@ -542,24 +646,61 @@ public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
             return SUR;
         }
 
-        public Map<List<S>, List<S>> getF() {
+        public Map<List<S>, Pair<List<S>, List<FunctionType>>> getF() {
             return f;
+        }
+
+        //--------------------------------------------
+        //                 Printing
+        //--------------------------------------------
+        public String toString() {
+            String ret = "E:";
+            for (List<S> w : E) ret += " " + w;
+            ret += "\nS:\n";
+            for (List<S> w : S) {
+                ret += " " + w + " :";
+                for (List<S> e : E) {
+                    List<S> we = new ArrayList<S>(w);
+                    we.addAll(e);
+                    if (f.containsKey(we)) {
+                        ret += f.get(we);
+                    }
+                    else ret += "  ";
+                }
+                ret += "\n";
+            }
+            ret += "R:";
+            for (List<S> w : R) {
+                ret += "\n " + w + " :";
+                for (List<S> e : E) {
+                    List<S> we = new ArrayList<S>(w);
+                    we.addAll(e);
+                    if (f.containsKey(we)) {
+                        ret += f.get(we);
+                    }
+                    else ret += "  ";
+                }
+            }
+            return ret;
         }
     }
 
 
+    //--------------------------------------------
+    //                 main method
+    //--------------------------------------------
     public static void main(String[] args) {
-        List<String> a = new ArrayList<>(Arrays.asList("xyz", "abc"));
-        List<String> b = new ArrayList<>(Arrays.asList("xyz", "abc"));
-        List<String> c = new ArrayList<>(Arrays.asList("abc", "xyz"));
-        List<String> d = new ArrayList<>(Arrays.asList("qwe", "wer"));
-
-        System.out.println(a.equals(b));
-        System.out.println(!a.equals(c));
-        System.out.println(!a.equals(d));
-        System.out.println(a.equals(a));
-
-        System.out.println(a.size());
-        System.out.println(a.subList(0,0));
+//        List<String> a = new ArrayList<>(Arrays.asList("xyz", "abc"));
+//        List<String> b = new ArrayList<>(Arrays.asList("xyz", "abc"));
+//        List<String> c = new ArrayList<>(Arrays.asList("abc", "xyz"));
+//        List<String> d = new ArrayList<>(Arrays.asList("qwe", "wer"));
+//
+//        System.out.println(a.equals(b));
+//        System.out.println(!a.equals(c));
+//        System.out.println(!a.equals(d));
+//        System.out.println(a.equals(a));
+//
+//        System.out.println(a.size());
+//        System.out.println(a.subList(0,0));
     }
 }

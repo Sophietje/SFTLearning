@@ -104,12 +104,6 @@ public class BinBLearner<P, S> {
             S.add(new ArrayList<S>());
             // Add S  = {e} to SUR so that SUR = {e}
             SUR.add(new ArrayList<S>());
-//            List<S> r = new ArrayList<S>();
-//            r.add(arbchar);
-            // Add a (R = {a})
-//            R.add(r);
-            // S U R = {e} U {a} = {e, a}
-//            SUR.add(r);
             // Add 'empty' / epsilon (E = {e})
             E.add(new ArrayList<S>());
         }

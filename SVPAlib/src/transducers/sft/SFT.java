@@ -1,4 +1,7 @@
 /**
+ * NOTICE: This file has been modified by Sophie Lathouwers
+ *
+ * Original file by:
  * SVPAlib
  * transducers.sft
  * Mar 5, 2018
@@ -25,6 +28,7 @@ import automata.sfa.SFAMove;
 import automata.sfa.SFAEpsilon;
 import automata.sfa.SFAInputMove;
 import theory.BooleanAlgebraSubst;
+import theory.characters.CharFunc;
 import theory.characters.CharPred;
 import theory.characters.TermInterface;
 import utilities.Pair;
@@ -113,10 +117,10 @@ public class SFT<P extends CharPred, F extends TermInterface, S> extends Automat
 		}
 	}
 
-	public static <P extends CharPred, F extends TermInterface, S> SFT<P, F, S> MkSFT(List<SFTMove<P, F, S>> transitions, Integer initialState,
-															 Map<Integer, Set<List<S>>> finalStatesAndTails,
-															 BooleanAlgebraSubst<P, F, S> ba) {
-		SFT<P, F, S> aut = new SFT<>();
+	public static <P extends CharPred, S> SFT<P, CharFunc, S> MkSFT(List<SFTMove<P, CharFunc, S>> transitions, Integer initialState,
+																	HashMap<Integer, Set<List<S>>> finalStatesAndTails,
+																	BooleanAlgebraSubst<P, CharFunc, S> ba) {
+		SFT<P, CharFunc, S> aut = new SFT<>();
 		System.out.println("In MkSFT with moves = "+transitions);
 
 		// Initialize state set
@@ -138,8 +142,7 @@ public class SFT<P extends CharPred, F extends TermInterface, S> extends Automat
 		aut.states.addAll(finalStatesAndTails.keySet());
 
 		try {
-			for (SFTMove<P, F, S> t : transitions) {
-				System.out.println("ADDING THE TRANSITION "+t+" TO THE FINAL SFT");
+			for (SFTMove<P, CharFunc, S> t : transitions) {
 				aut.addTransition(t, ba, false);
 			}
 			return aut;
