@@ -1,3 +1,7 @@
+/**
+ * NOTICE: This file has been modified by Sophie Lathouwers!
+ */
+
 package learning.sfa;
 
 import static com.google.common.base.Preconditions.checkArgument;
