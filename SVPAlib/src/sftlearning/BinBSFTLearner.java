@@ -445,17 +445,25 @@ public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
                 for (int j=0; j < S.size(); j++) {
                     // sp is the state to which we 'move'
                     List<S> sp = S.get(j);
+
+                    List<S> outputFrom = f.get(S.get(i)).getKey();
+                    List<S> outputTo = f.get(S.get(j)).getKey();
+
+                    List<S> outputOnEvidence = getSuffix(outputFrom, outputTo);
 //                    System.out.println("Add to groups: ("+transitions.get(sb).get(getFunctionRow(sp))+" ,output="+getFunctionRow(sp)+" ,to="+j+")");
-                    groups.put(transitions.get(sb).get(getFunctionRow(sp)), new Pair<>(f.get(S.get(i)).getKey(), j));
+                    // Add the following to the group: evidence(from, to), outputUpon(to), index(to)
+
+                    // Groups should contain the following: evidence(from, to), outputUpon(evidence), index(to)
+                    groups.put(transitions.get(sb).get(getFunctionRow(sp)), new Pair<>(outputOnEvidence, j));
                 }
                 // sepPreds is a list of Predicates which are mapped to corresponding term functions
-                LinkedHashMap<P, Pair<List<CharFunc>, Integer>> sepPreds = ba.getSeparatingPredicatesAndTermFunctions(groups, this, S.get(i), Long.MAX_VALUE);
+                LinkedHashMap<P, Pair<List<CharFunc>, Integer>> sepPreds = ba.getSeparatingPredicatesAndTermFunctions(groups, this, S.get(i));
 
                 for (P key : sepPreds.keySet()) {
                     // Cannot simply assume i will be next state because we can have multiple transitions from i to j with different predicates
                     // Add the transition i---pred_j (key) / terms_j (sepPreds.get(key)) ---> j (index)
 
-                    if (key != null && key.intervals != null && !key.intervals.isEmpty() && key.intervals.get(0) != null) {
+                    if (key.intervals != null && !key.intervals.isEmpty() && key.intervals.get(0) != null) {
                         moves.add(new SFTInputMove<>(i, sepPreds.get(key).getValue(), key, sepPreds.get(key).getKey()));
                     }
                 }
@@ -469,6 +477,9 @@ public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
                 // Add state i to final states if f(i) = true
                 // TODO: For now we assume that all states are accepting
                 // TODO: In reality all rows for which the first column (extension = []) is accepting, should be an accepting state
+                // TODO: ALSO in reality many sanitizers do not reject any output, instead they then simply output the empty string
+                // TODO: And we CANNOT detect the difference between outputting an empty string or rejecting an output in this case, thus likely we can assume that sanitizers accept all inputs??
+                // TODO: This answer can be found by looking into examples of the behaviour of sanitizers
                 fin.put(i, new HashSet<>());
             }
             SFT ret = SFT.MkSFT(moves, init, fin, ba);

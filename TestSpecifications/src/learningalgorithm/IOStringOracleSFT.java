@@ -55,12 +55,6 @@ public class IOStringOracleSFT extends SymbolicOracle<CharPred, CharFunc, Charac
         return answer;
     }
 
-    public List<CharFunc> getTermFunctions(CharPred p) {
-        List<CharFunc> termFunctions = new ArrayList<>();
-        termFunctions.add(CharOffset.IDENTITY);
-        return termFunctions;
-    }
-
     public static void main(String[] args) {
         UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
         SFTLearner ell = new SFTLearner();
@@ -72,7 +66,6 @@ public class IOStringOracleSFT extends SymbolicOracle<CharPred, CharFunc, Charac
         } catch (TimeoutException e) {
             e.printStackTrace();
         }
-
     }
 
 }

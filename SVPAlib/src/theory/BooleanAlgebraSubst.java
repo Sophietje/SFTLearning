@@ -9,7 +9,6 @@
  */
 package theory;
 
-import com.google.common.collect.ImmutableList;
 import javafx.util.Pair;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.sat4j.specs.TimeoutException;
@@ -67,95 +66,104 @@ public abstract class BooleanAlgebraSubst<P extends CharPred,F extends TermInter
 	 */
 	public abstract P getRestrictedOutput(P p, F f);
 
-	public ArrayList<P> getSeparatingPredicates(ArrayList<Collection<S>> characterGroups, long timeout) throws TimeoutException {
-
-		//If there is just one bucket return true
-		ArrayList<P> out = new ArrayList<>();
-		if(characterGroups.size()<=1){
-			out.add(True());
-			return out;
-		}
-
-		//Find largest group
-		int maxGroup = 0;
-		int maxSize = characterGroups.get(0).size();
-		for(int i=1;i<characterGroups.size();i++){
-			int ithSize = characterGroups.get(i).size();
-			if(ithSize>maxSize){
-				maxSize=ithSize;
-				maxGroup=i;
-			}
-		}
-
-		//Build negated predicate
-		P largePred = False();
-		for(int i=0;i<characterGroups.size();i++){
-			if(i!=maxGroup)
-				for(S s: characterGroups.get(i))
-					largePred = MkOr(largePred, MkAtom(s));
-		}
-		largePred = MkNot(largePred);
-
-		//Build list of predicates
-		for(int i=0;i<characterGroups.size();i++){
-			if(i!=maxGroup){
-				P ithPred = False();
-				for(S s: characterGroups.get(i))
-					ithPred = MkOr(ithPred, MkAtom(s));
-				out.add(ithPred);
-			}
-			else
-				out.add(largePred);
-		}
-
-		return out;
-	}
+//	public ArrayList<P> getSeparatingPredicates(ArrayList<Collection<S>> characterGroups, long timeout) throws TimeoutException {
+//
+//		//If there is just one bucket return true
+//		ArrayList<P> out = new ArrayList<>();
+//		if(characterGroups.size()<=1){
+//			out.add(True());
+//			return out;
+//		}
+//
+//		//Find largest group
+//		int maxGroup = 0;
+//		int maxSize = characterGroups.get(0).size();
+//		for(int i=1;i<characterGroups.size();i++){
+//			int ithSize = characterGroups.get(i).size();
+//			if(ithSize>maxSize){
+//				maxSize=ithSize;
+//				maxGroup=i;
+//			}
+//		}
+//
+//		//Build negated predicate
+//		P largePred = False();
+//		for(int i=0;i<characterGroups.size();i++){
+//			if(i!=maxGroup)
+//				for(S s: characterGroups.get(i))
+//					largePred = MkOr(largePred, MkAtom(s));
+//		}
+//		largePred = MkNot(largePred);
+//
+//		//Build list of predicates
+//		for(int i=0;i<characterGroups.size();i++){
+//			if(i!=maxGroup){
+//				P ithPred = False();
+//				for(S s: characterGroups.get(i))
+//					ithPred = MkOr(ithPred, MkAtom(s));
+//				out.add(ithPred);
+//			}
+//			else
+//				out.add(largePred);
+//		}
+//
+//		return out;
+//	}
 
 	// NOTE: This function will only generate IDENTITY FUNCTIONS as term generating functions!!
-	public LinkedHashMap<P, List<CharFunc>> getSeparatingPredicatesAndTermFunctions(List<Collection<S>> characterGroups, long timeout) throws TimeoutException {
-		//If there is just one bucket return true
-		LinkedHashMap<P, List<CharFunc>> out = new LinkedHashMap<>();
-		if(characterGroups.size()<=1){
-			out.put(True(), F.getIdentityFunction());
-			return out;
-		}
+//	public LinkedHashMap<P, List<CharFunc>> getSeparatingPredicatesAndTermFunctions(List<Collection<S>> characterGroups, long timeout) throws TimeoutException {
+//		//If there is just one bucket return true
+//		LinkedHashMap<P, List<CharFunc>> out = new LinkedHashMap<>();
+//		if(characterGroups.size()<=1){
+//			out.put(True(), F.getIdentityFunction());
+//			return out;
+//		}
+//
+//
+//		//Find largest group
+//		int maxGroup = 0;
+//		int maxSize = 0;
+//		for (int i=0; i<characterGroups.size(); i++) {
+//			int ithSize = characterGroups.get(i).size();
+//			if (ithSize > maxSize) {
+//				maxSize = ithSize;
+//				maxGroup = i;
+//			}
+//		}
+//
+//		//Build negated predicate
+//		P largePred = False();
+//		for(int i=0;i<characterGroups.size();i++){
+//			if(i!=maxGroup)
+//				for(S s: characterGroups.get(i))
+//					largePred = MkOr(largePred, MkAtom(s));
+//		}
+//		largePred = MkNot(largePred);
+//
+//		//Build list of predicates
+//		for(int i=0;i<characterGroups.size();i++){
+//			if(i!=maxGroup){
+//				P ithPred = False();
+//				for(S s: characterGroups.get(i))
+//					ithPred = MkOr(ithPred, MkAtom(s));
+//				out.put(ithPred, F.getIdentityFunction());
+//			}
+//			else
+//				out.put(largePred, F.getIdentityFunction());
+//		}
+//		return out;
+//	}
 
-
-		//Find largest group
-		int maxGroup = 0;
-		int maxSize = 0;
-		for (int i=0; i<characterGroups.size(); i++) {
-			int ithSize = characterGroups.get(i).size();
-			if (ithSize > maxSize) {
-				maxSize = ithSize;
-				maxGroup = i;
-			}
-		}
-
-		//Build negated predicate
-		P largePred = False();
-		for(int i=0;i<characterGroups.size();i++){
-			if(i!=maxGroup)
-				for(S s: characterGroups.get(i))
-					largePred = MkOr(largePred, MkAtom(s));
-		}
-		largePred = MkNot(largePred);
-
-		//Build list of predicates
-		for(int i=0;i<characterGroups.size();i++){
-			if(i!=maxGroup){
-				P ithPred = False();
-				for(S s: characterGroups.get(i))
-					ithPred = MkOr(ithPred, MkAtom(s));
-				out.put(ithPred, F.getIdentityFunction());
-			}
-			else
-				out.put(largePred, F.getIdentityFunction());
-		}
-		return out;
-	}
-
-	public LinkedHashMap<P, Pair<List<CharFunc>, Integer>> getSeparatingPredicatesAndTermFunctions(Map<Set<S>, Pair<List<S>, Integer>> predOutputGroups, BinBSFTLearner.ObsTable ot, List<S> from, long timeout) throws TimeoutException {
+	/**
+	 * This will generate predicates and corresponding term functions
+	 *
+	 * @param predOutputGroups contains entries in the form of (evidence, (output on given evidence, index of To state))
+	 * @param ot symbolic observation table
+	 * @param from state from which transitions' predicates and terms should be generated
+	 * @return map containing entries in the form (predicate, (term functions, index of To state))
+	 * @throws TimeoutException
+	 */
+	public LinkedHashMap<P, Pair<List<CharFunc>, Integer>> getSeparatingPredicatesAndTermFunctions(Map<Set<S>, Pair<List<S>, Integer>> predOutputGroups, BinBSFTLearner.ObsTable ot, List<S> from) throws TimeoutException {
 		// predOutputGroups is a map of evidence to output
 		// The evidence will be generalized into predicates here
 		// Also need to generate term functions based on evidence/output-relation
