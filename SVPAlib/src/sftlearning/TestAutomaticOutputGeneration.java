@@ -11,11 +11,11 @@ import java.util.List;
 import java.util.Scanner;
 import java.util.regex.Matcher;
 
-public class EscapingSlashes extends SymbolicOracle<CharPred, CharFunc, Character> {
+public class TestAutomaticOutputGeneration extends SymbolicOracle<CharPred, CharFunc, Character> {
 
     private Scanner sc;
 
-    public EscapingSlashes() {
+    public TestAutomaticOutputGeneration() {
         sc = new Scanner(System.in);
     }
 
@@ -50,7 +50,62 @@ public class EscapingSlashes extends SymbolicOracle<CharPred, CharFunc, Characte
 
     @Override
     protected List<Character> checkMembershipImpl(List<Character> w) {
-        return escape(w);
+        return encode(w);
+    }
+
+    public static List<Character> encode(List<Character> w) {
+        List<Character> result = new ArrayList<>();
+        for (Character c : w) {
+            if (c == '<') {
+                result.add('&');
+                result.add('g');
+                result.add('t');
+                result.add(';');
+            } else if (c == '>') {
+                result.add('&');
+                result.add('g');
+                result.add('t');
+                result.add(';');
+            } else if (c == '&') {
+                result.add('&');
+                result.add('a');
+                result.add('m');
+                result.add('p');
+                result.add(';');
+            } else {
+                result.add(c);
+            }
+        }
+        return result;
+    }
+
+    public static List<Character> encodeLT(List<Character> w) {
+        List<Character> result = new ArrayList<>();
+        for (Character c : w) {
+            if (c == '<') {
+                result.add('&');
+                result.add('a');
+                result.add('m');
+                result.add('p');
+                result.add(';');
+            } else {
+                result.add(c);
+            }
+        }
+        return result;
+    }
+
+    public static List<Character> capitalize(List<Character> w) {
+        String input = "";
+        for (Character c : w) {
+            input += c;
+        }
+        String result = input.toUpperCase();
+        List<Character> resultCharacters = new ArrayList<>(result.length());
+        for (int i = 0; i<result.length(); i++) {
+            resultCharacters.add(result.charAt(i));
+        }
+        return resultCharacters;
     }
 
     public static List<Character> escape(List<Character> w) {
@@ -80,7 +135,7 @@ public class EscapingSlashes extends SymbolicOracle<CharPred, CharFunc, Characte
 
         UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
         BinBSFTLearner ell = new BinBSFTLearner();
-        SymbolicOracle o = new EscapingSlashes();
+        SymbolicOracle o = new TestAutomaticOutputGeneration();
         SFT<CharPred, CharFunc, Character> learned = null;
         try {
             learned = ell.learn(o, ba);

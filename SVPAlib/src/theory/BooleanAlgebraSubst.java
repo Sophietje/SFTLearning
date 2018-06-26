@@ -66,93 +66,6 @@ public abstract class BooleanAlgebraSubst<P extends CharPred,F extends TermInter
 	 */
 	public abstract P getRestrictedOutput(P p, F f);
 
-//	public ArrayList<P> getSeparatingPredicates(ArrayList<Collection<S>> characterGroups, long timeout) throws TimeoutException {
-//
-//		//If there is just one bucket return true
-//		ArrayList<P> out = new ArrayList<>();
-//		if(characterGroups.size()<=1){
-//			out.add(True());
-//			return out;
-//		}
-//
-//		//Find largest group
-//		int maxGroup = 0;
-//		int maxSize = characterGroups.get(0).size();
-//		for(int i=1;i<characterGroups.size();i++){
-//			int ithSize = characterGroups.get(i).size();
-//			if(ithSize>maxSize){
-//				maxSize=ithSize;
-//				maxGroup=i;
-//			}
-//		}
-//
-//		//Build negated predicate
-//		P largePred = False();
-//		for(int i=0;i<characterGroups.size();i++){
-//			if(i!=maxGroup)
-//				for(S s: characterGroups.get(i))
-//					largePred = MkOr(largePred, MkAtom(s));
-//		}
-//		largePred = MkNot(largePred);
-//
-//		//Build list of predicates
-//		for(int i=0;i<characterGroups.size();i++){
-//			if(i!=maxGroup){
-//				P ithPred = False();
-//				for(S s: characterGroups.get(i))
-//					ithPred = MkOr(ithPred, MkAtom(s));
-//				out.add(ithPred);
-//			}
-//			else
-//				out.add(largePred);
-//		}
-//
-//		return out;
-//	}
-
-	// NOTE: This function will only generate IDENTITY FUNCTIONS as term generating functions!!
-//	public LinkedHashMap<P, List<CharFunc>> getSeparatingPredicatesAndTermFunctions(List<Collection<S>> characterGroups, long timeout) throws TimeoutException {
-//		//If there is just one bucket return true
-//		LinkedHashMap<P, List<CharFunc>> out = new LinkedHashMap<>();
-//		if(characterGroups.size()<=1){
-//			out.put(True(), F.getIdentityFunction());
-//			return out;
-//		}
-//
-//
-//		//Find largest group
-//		int maxGroup = 0;
-//		int maxSize = 0;
-//		for (int i=0; i<characterGroups.size(); i++) {
-//			int ithSize = characterGroups.get(i).size();
-//			if (ithSize > maxSize) {
-//				maxSize = ithSize;
-//				maxGroup = i;
-//			}
-//		}
-//
-//		//Build negated predicate
-//		P largePred = False();
-//		for(int i=0;i<characterGroups.size();i++){
-//			if(i!=maxGroup)
-//				for(S s: characterGroups.get(i))
-//					largePred = MkOr(largePred, MkAtom(s));
-//		}
-//		largePred = MkNot(largePred);
-//
-//		//Build list of predicates
-//		for(int i=0;i<characterGroups.size();i++){
-//			if(i!=maxGroup){
-//				P ithPred = False();
-//				for(S s: characterGroups.get(i))
-//					ithPred = MkOr(ithPred, MkAtom(s));
-//				out.put(ithPred, F.getIdentityFunction());
-//			}
-//			else
-//				out.put(largePred, F.getIdentityFunction());
-//		}
-//		return out;
-//	}
 
 	/**
 	 * This will generate predicates and corresponding term functions
@@ -369,8 +282,6 @@ public abstract class BooleanAlgebraSubst<P extends CharPred,F extends TermInter
 			return new ArrayList<>();
 		}
 
-		System.out.println("SPLITTING THE PREDICATE: "+ithPred);
-
 		List<List<Character>> words = ot.getSUR();
 		List<CharPred> result = new ArrayList<>();
 		CharPred left = False();
@@ -385,7 +296,6 @@ public abstract class BooleanAlgebraSubst<P extends CharPred,F extends TermInter
 				Character extension = word.get(word.size()-1);
 				// And if so, and the last character satisfies the predicate
 				if (ithPred.isSatisfiedBy(extension) && !isSplit) {
-					System.out.println("Predicate "+ithPred+" is satisfied by "+extension);
 					// Then we need to check whether the predicate needs to be split into multiple predicates
 					// TODO: check whether we can look up correct value in table for (word + [])
 					// Find value in table:
@@ -414,7 +324,6 @@ public abstract class BooleanAlgebraSubst<P extends CharPred,F extends TermInter
 							i++;
 						}
 						for (ImmutablePair<Character, Character> subPred : ithPred.intervals) {
-							System.out.println("Considering the following interval: "+subPred);
 							CharPred pr = new CharPred(subPred.getLeft(), subPred.getRight());
 							// Need to find the specific interval in the predicate that needs to be split
 							if (pr.isSatisfiedBy(extension) && !isSplit) {
@@ -433,11 +342,6 @@ public abstract class BooleanAlgebraSubst<P extends CharPred,F extends TermInter
 										left = MkOr((P) left, before);
 										// after needs to be added to the predicate with all next intervals
 										right = MkOr((P) right, after);
-										System.out.println("=====-----=====-----=====");
-										System.out.println("Before: "+before);
-										System.out.println("After: "+after);
-										System.out.println(left+" --- "+right);
-										System.out.println("=====-----=====-----=====");
 
 										// Make sure that all following intervals are added to the [current, right] predicate
 									} else {
@@ -454,11 +358,6 @@ public abstract class BooleanAlgebraSubst<P extends CharPred,F extends TermInter
 									Character split = subPred.getLeft();
 									split++;
 									right = MkOr((P) right, (P) new CharPred(split, subPred.getRight()));
-									System.out.println("§§§§§§§§§§§§§§§§§§§§");
-									System.out.println("Before: "+subPred.getLeft());
-									System.out.println("After: "+split);
-									System.out.println(left+" --- "+right);
-									System.out.println("§§§§§§§§§§§§§§§§§§§§");
 								} else {
 									System.out.println("ERROR: current < subPred.left!");
 								}
@@ -481,8 +380,6 @@ public abstract class BooleanAlgebraSubst<P extends CharPred,F extends TermInter
 			return result;
 		}
 
-		System.out.println("After splitting the left predicate is "+left);
-		System.out.println("After splitting the right predicate is "+right);
 		if (left.equals(ithPred)) {
 			// If the left predicate is equal to the original predicate, then it did not need to be split!
 			result.add(left);
@@ -497,7 +394,6 @@ public abstract class BooleanAlgebraSubst<P extends CharPred,F extends TermInter
 		for (CharPred p : preds) {
 			result.add(p);
 		}
-		System.out.println("Final result: "+result);
 		return result;
 	}
 

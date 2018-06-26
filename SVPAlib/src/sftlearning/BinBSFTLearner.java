@@ -237,9 +237,15 @@ public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
                     }
                     Pair<List<S>, List<FunctionType>> pair = new Pair<>(answer, functionTypes);
                     f.put(s, pair);
+                    // TODO: Moet ik het hier wel aan de tabel toevoegen?
                     addToTable(s, o);
                     return pair;
                 }
+            }
+
+            if (s.size()>0 && prefix.size() < s.size()-1) {
+                f.put(getList(s, 0, s.size()-1), getOutputPair(getList(s, 0, s.size()-1), o));
+                prefix = getLongestPrefixInTable(s);
             }
 
             List<S> prefixAnswer = f.get(prefix).getKey();
