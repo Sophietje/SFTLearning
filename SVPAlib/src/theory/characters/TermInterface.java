@@ -1,11 +1,14 @@
+/**
+ * NOTICE: This file has been made by Sophie Lathouwers!
+ * @author Sophie Lathouwers
+ */
+
 package theory.characters;
 
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Written by Sophie Lathouwers
- */
+
 public interface TermInterface {
 
     static List<CharFunc> getIdentityFunction() {

@@ -1,4 +1,7 @@
 /**
+ * NOTICE: This file has been modified by Sophie Lathouwers!
+ *
+ * Original file:
  * SVPAlib
  * theory
  * Apr 21, 2015
