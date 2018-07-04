@@ -607,7 +607,7 @@ public class SFTLearner {
                 for (List<Character> sp : S) {
                     groups_arr.add(trans.get(sb).get(row(sp)));
                 }
-                LinkedHashMap<CharPred, List<CharFunc>> sepPreds = ba.getSeparatingPredicatesAndTermFunctions(groups_arr, Long.MAX_VALUE);
+                LinkedHashMap<CharPred, List<CharFunc>> sepPreds = ba.getSeparatingPredicatesAndTermFunctions(groups_arr, this, Long.MAX_VALUE);
                 checkArgument(sepPreds.size() == S.size());
 
                 int index = 0;

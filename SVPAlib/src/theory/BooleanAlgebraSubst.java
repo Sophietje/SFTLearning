@@ -163,8 +163,8 @@ public abstract class BooleanAlgebraSubst<P extends CharPred,F extends TermInter
 						throw new NotImplementedException();
 					}
 				}
-				// Need to check whether output is generated in the same way for each atom in the predicate
-				// If not, then the predicate needs to be split into multiple transitions with different output functions
+				// TODO: Need to check whether output is generated in the same way for each atom in the predicate
+				// TODO: If not, then the predicate needs to be split into multiple transitions with different output functions
 //				List<CharPred> preds = splitPredicate(ithPred, ot, fromChars);
 
 //				for (CharPred p : ithPred) {

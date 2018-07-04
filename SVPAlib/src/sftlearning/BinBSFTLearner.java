@@ -70,6 +70,8 @@ public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
             boolean closed = false;
             while (!closed) {
                 if (table.close()) {
+                    System.out.println("The table was not closed!:");
+                    System.out.println(table);
                     // Table was not closed, fill table since strings were added to it in close()
                     table.fill(o);
                 } else {
@@ -323,6 +325,7 @@ public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
          * @param cx the counterexample that should be processed
          */
         public void process(List<S> cx, SymbolicOracle<P, F, S> o, BooleanAlgebraSubst<P, CharFunc, S> ba) throws TimeoutException {
+            System.out.println("Counterexample is: "+cx);
             if (cx.size() == 1) {
                 addToTable(cx, o);
             }
@@ -346,9 +349,12 @@ public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
                     same = i;
                 }
             }
+            System.out.println("i0 = "+(diff-1));
             // Construct s_i0 b
             List<S> wrongTransition = runInHypothesis(o, ba, cx, diff-1);
+            System.out.println("Si0 = "+wrongTransition);
             wrongTransition.add(cx.get(diff-1));
+            System.out.println("Si0 b = "+wrongTransition);
 
             // Check whether s_i0 b == s_j mod W U {d} for some j ±= i_0 + 1
             // b is a character from the input language
@@ -359,6 +365,7 @@ public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
             } else {
                 // Else, add d to W (E)
                 List<S> dist = new ArrayList<>(getList(cx, diff, cx.size()));
+                System.out.println("d = "+dist);
                 if (!E.contains(dist)) {
                     E.add(dist);
                 }
