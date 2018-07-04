@@ -353,12 +353,18 @@ public abstract class BooleanAlgebraSubst<P extends CharPred,F extends TermInter
 										// All functions were the same therefore the predicate does not need to be split
 										left = MkOr((P) left, (P) pr);
 									}
-								} else if (current.equals(subPred.getLeft())) {
+								} else if (current.equals(subPred.getLeft()) && subPred.getRight() != null && subPred.getRight() != subPred.getLeft()) {
 									left = MkOr((P) left, (P) new CharPred(subPred.getLeft(), subPred.getLeft()));
 									Character split = subPred.getLeft();
 									split++;
+									System.out.println("LEFT = "+subPred.getLeft()+" (char value = "+subPred.getLeft().charValue()+")");
+									System.out.println("RIGHT = "+subPred.getRight()+" (char value = "+subPred.getRight().charValue()+")");
 									right = MkOr((P) right, (P) new CharPred(split, subPred.getRight()));
+								} else if (current.equals(subPred.getLeft()) && subPred.getRight() == subPred.getLeft()) {
+									left = MkOr((P) left, (P) new CharPred(subPred.getLeft(), subPred.getRight()));
 								} else {
+									System.out.println("Current = "+current);
+									System.out.println("["+subPred.getLeft()+", "+subPred.getRight()+"]");
 									System.out.println("ERROR: current < subPred.left!");
 								}
 							} else if (!pr.isSatisfiedBy(extension) && !isSplit) {
