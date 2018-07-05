@@ -6,6 +6,7 @@ import theory.characters.CharPred;
 import theory.intervals.UnaryCharIntervalSolver;
 import transducers.sft.SFT;
 
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
@@ -50,6 +51,25 @@ public class TestAutomaticOutputGeneration extends SymbolicOracle<CharPred, Char
 
     @Override
     protected List<Character> checkMembershipImpl(List<Character> w) {
+        // TODO: Use exec() call to call appropriate command to execute Python/Ruby/PHP/etc.
+//        try {
+//            Process p = Runtime.getRuntime().exec("python test.py abc<>&<>&ab\\c");
+//            InputStream inputStream = p.getInputStream();
+//            OutputStream outputStream = p.getOutputStream();
+//            String s = "";
+//            for (Character c : w) {
+//                s += c;
+//            }
+//            OutputStreamWriter ioWriter = new OutputStreamWriter(outputStream);
+//            ioWriter.write(s);
+//            InputStreamReader ioReader = new InputStreamReader(inputStream);
+//            int i = ioReader.read();
+//
+//        } catch (IOException e) {
+//            System.out.println("ERR: Was unable to execute the command!");
+//            System.exit(0);
+//        }
+        // For the above mentioned command, have a look at: https://stackoverflow.com/questions/10097491/call-and-receive-output-from-python-script-in-java
         return encode(w);
     }
 

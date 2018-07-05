@@ -82,7 +82,7 @@ public class TestAutomaticEquivalenceOracle extends SymbolicOracle<CharPred, Cha
      */
     public List<Character> randomTransitionEO(SFT<CharPred, CharFunc, Character> compareTo) throws TimeoutException {
         int maxLength = 15;
-        int numTests = 1000;
+        int numTests = 2000;
         List<List<Character>> tested = new ArrayList<>();
         int state = compareTo.getInitialState();
 
@@ -153,7 +153,7 @@ public class TestAutomaticEquivalenceOracle extends SymbolicOracle<CharPred, Cha
     @Override
     protected List<Character> checkMembershipImpl(List<Character> w) {
         // TODO: Use exec() call to call appropriate command to execute Python/Ruby/PHP/etc.
-        return encode(w);
+        return escape(w);
     }
 
     /**
@@ -263,7 +263,8 @@ public class TestAutomaticEquivalenceOracle extends SymbolicOracle<CharPred, Cha
         SFT<CharPred, CharFunc, Character> learned = null;
         try {
             learned = ell.learn(o, ba);
-            learned.createDotFile("testEscapingSlashes", "/Users/NW/Documents/Djungarian/SVPAlib/src/learning/sfa");
+            System.out.println(learned);
+//            learned.createDotFile("testEscapingSlashes", "/Users/NW/Documents/Djungarian/SVPAlib/src/learning/sfa");
         } catch (TimeoutException e) {
             e.printStackTrace();
         }

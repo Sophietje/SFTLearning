@@ -264,7 +264,7 @@ public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
             List<FunctionType> functions = new ArrayList<>();
             for (int i=0; i<suffix.size(); i++) {
                 // Make sure to look at the last character of the input if input.size() < output.size()
-                int index = -1;
+                int index;
                 if (prefixAnswer.size()+i > s.size()-1) {
                     index = s.size()-1;
                 } else {
@@ -463,7 +463,6 @@ public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
                     List<S> outputTo = f.get(S.get(j)).getKey();
 
                     List<S> outputOnEvidence = getSuffix(outputFrom, outputTo);
-//                    System.out.println("Add to groups: ("+transitions.get(sb).get(getFunctionRow(sp))+" ,output="+getFunctionRow(sp)+" ,to="+j+")");
                     // Add the following to the group: evidence(from, to), outputUpon(to), index(to)
 
                     // Groups should contain the following: evidence(from, to), outputUpon(evidence), index(to)
@@ -488,7 +487,7 @@ public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
             HashMap<Integer, Set<List<S>>> fin = new HashMap<>();
             for (int i = 0; i < S.size(); i++) {
                 // Add state i to final states if f(i) = true
-                // TODO: For now we assume that all states are accepting
+                // TODO: We assume that all states are accepting
                 // TODO: In reality all rows for which the first column (extension = []) is accepting, should be an accepting state
                 // TODO: ALSO in reality many sanitizers do not reject any output, instead they then simply output the empty string
                 // TODO: And we CANNOT detect the difference between outputting an empty string or rejecting an output in this case, thus likely we can assume that sanitizers accept all inputs??

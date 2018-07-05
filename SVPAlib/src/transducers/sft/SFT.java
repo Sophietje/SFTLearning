@@ -121,7 +121,6 @@ public class SFT<P extends CharPred, F extends TermInterface, S> extends Automat
 																	HashMap<Integer, Set<List<S>>> finalStatesAndTails,
 																	BooleanAlgebraSubst<P, CharFunc, S> ba) {
 		SFT<P, CharFunc, S> aut = new SFT<>();
-		System.out.println("In MkSFT with moves = "+transitions);
 
 		// Initialize state set
 		aut.initialState = initialState;
@@ -1073,11 +1072,9 @@ public class SFT<P extends CharPred, F extends TermInterface, S> extends Automat
 			states.add(transition.to);
 
 			if (transition.isEpsilonTransition()) {
-				System.out.println("Adding epsilon transition");
 				getEpsilonMovesFrom(transition.from).add((SFTEpsilon<P, F, S>) transition);
 				getEpsilonMovesTo(transition.to).add((SFTEpsilon<P, F, S>) transition);
 			} else {
-				System.out.println("Adding input move transition");
 				getInputMovesFrom(transition.from).add((SFTInputMove<P, F, S>) transition);
 				getInputMovesTo(transition.to).add((SFTInputMove<P, F, S>) transition);
 			}
