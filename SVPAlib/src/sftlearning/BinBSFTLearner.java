@@ -16,6 +16,7 @@ import transducers.sft.SFTInputMove;
 import transducers.sft.SFTMove;
 
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
 
@@ -550,6 +551,7 @@ public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
                 }
             }
 
+
             if (best_r == null) {
                 // All rows in R are in S thus the table is closed
                 return false;
@@ -559,7 +561,6 @@ public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
             S.add(best_r);
             R.remove(best_r);
 
-
             // If best_r is a prefix of an existing word in the table,
             // Then we do not need to add the one-step extension
             boolean cont = false;
@@ -567,18 +568,20 @@ public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
                 if (w.size() != best_r.size() + 1)
                     continue;
                 if (isPrefix(best_r, w)) {
+                    System.out.println("The table contains the one-step extension "+w);
                     cont = true;
                     break;
                 }
             }
-            //
+            // There does not exist a one-step extension of best_r, thus add a one-step extension to the table!
             if (!cont) {
                 List<S> ra = new ArrayList<>(best_r);
                 ra.add(arbchar);
                 R.add(ra);
                 SUR.add(ra);
+                System.out.println("ADDED THE FOLLOWING WORD TO THE TABLE: "+ra);
             }
-            // TODO: Don't need to add ALL one-step extensions?
+
             return true;
         }
 

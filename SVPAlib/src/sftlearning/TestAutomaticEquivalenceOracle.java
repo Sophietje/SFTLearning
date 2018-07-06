@@ -127,7 +127,6 @@ public class TestAutomaticEquivalenceOracle extends SymbolicOracle<CharPred, Cha
             }
         }
         return null;
-
     }
 
 
@@ -154,6 +153,20 @@ public class TestAutomaticEquivalenceOracle extends SymbolicOracle<CharPred, Cha
     protected List<Character> checkMembershipImpl(List<Character> w) {
         // TODO: Use exec() call to call appropriate command to execute Python/Ruby/PHP/etc.
         return escape(w);
+    }
+
+    public static List<Character> removeEvenBs(List<Character> w) {
+        List<Character> result = new ArrayList<>();
+        int numberBs = 0;
+        for (Character c : w) {
+            if (c == 'b') {
+                numberBs++;
+            }
+            if (!(c == 'b' && numberBs % 2 == 0)) {
+                result.add(c);
+            }
+        }
+        return result;
     }
 
     /**
@@ -246,17 +259,6 @@ public class TestAutomaticEquivalenceOracle extends SymbolicOracle<CharPred, Cha
     }
 
     public static void main(String[] args) {
-//        List<Character> word = new ArrayList<>();
-//        printCharList(escape(word));
-//        word.add('b');
-//        printCharList(escape(word));
-//        word.add('\\');
-//        printCharList(escape(word));
-//        word.add('\\');
-//        printCharList(escape(word));
-//        word.add('b');
-//        printCharList(escape(word));
-
         ba = new UnaryCharIntervalSolver();
         BinBSFTLearner ell = new BinBSFTLearner();
         o = new TestAutomaticEquivalenceOracle();

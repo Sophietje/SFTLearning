@@ -16,6 +16,8 @@ public class TestAutomaticOutputGeneration extends SymbolicOracle<CharPred, Char
 
     private Scanner sc;
 
+    private static final String command = "ruby /Users/NW/Documents/Djungarian/Sanitizers/src/escapeHTML.rb";
+
     public TestAutomaticOutputGeneration() {
         sc = new Scanner(System.in);
     }
@@ -49,28 +51,52 @@ public class TestAutomaticOutputGeneration extends SymbolicOracle<CharPred, Char
         return chars;
     }
 
+//    @Override
+//    protected List<Character> checkMembershipImpl(List<Character> w) {
+//        // TODO: Use exec() call to call appropriate command to execute Python/Ruby/PHP/etc.
+////        try {
+////            Process p = Runtime.getRuntime().exec("python test.py abc<>&<>&ab\\c");
+////            InputStream inputStream = p.getInputStream();
+////            OutputStream outputStream = p.getOutputStream();
+////            String s = "";
+////            for (Character c : w) {
+////                s += c;
+////            }
+////            OutputStreamWriter ioWriter = new OutputStreamWriter(outputStream);
+////            ioWriter.write(s);
+////            InputStreamReader ioReader = new InputStreamReader(inputStream);
+////            int i = ioReader.read();
+////
+////        } catch (IOException e) {
+////            System.out.println("ERR: Was unable to execute the command!");
+////            System.exit(0);
+////        }
+//        // For the above mentioned command, have a look at: https://stackoverflow.com/questions/10097491/call-and-receive-output-from-python-script-in-java
+//        return encode(w);
+//    }
     @Override
     protected List<Character> checkMembershipImpl(List<Character> w) {
+        String input = "";
+        for (Character c : w) {
+            input += c;
+        }
+        String output = ExecuteCommand.executeCommandPB(command.split(" "), input);
         // TODO: Use exec() call to call appropriate command to execute Python/Ruby/PHP/etc.
-//        try {
-//            Process p = Runtime.getRuntime().exec("python test.py abc<>&<>&ab\\c");
-//            InputStream inputStream = p.getInputStream();
-//            OutputStream outputStream = p.getOutputStream();
-//            String s = "";
-//            for (Character c : w) {
-//                s += c;
-//            }
-//            OutputStreamWriter ioWriter = new OutputStreamWriter(outputStream);
-//            ioWriter.write(s);
-//            InputStreamReader ioReader = new InputStreamReader(inputStream);
-//            int i = ioReader.read();
-//
-//        } catch (IOException e) {
-//            System.out.println("ERR: Was unable to execute the command!");
-//            System.exit(0);
-//        }
-        // For the above mentioned command, have a look at: https://stackoverflow.com/questions/10097491/call-and-receive-output-from-python-script-in-java
-        return encode(w);
+        return stringToCharList(output);
+    }
+
+    public static List<Character> removeEvenBs(List<Character> w) {
+        List<Character> result = new ArrayList<>();
+        int numberBs = 0;
+        for (Character c : w) {
+            if (c == 'b') {
+                numberBs++;
+            }
+            if (!(c == 'b' && numberBs % 2 == 0)) {
+                result.add(c);
+            }
+        }
+        return result;
     }
 
     public static List<Character> encode(List<Character> w) {
@@ -159,7 +185,8 @@ public class TestAutomaticOutputGeneration extends SymbolicOracle<CharPred, Char
         SFT<CharPred, CharFunc, Character> learned = null;
         try {
             learned = ell.learn(o, ba);
-            learned.createDotFile("testEscapingSlashes", "/Users/NW/Documents/Djungarian/SVPAlib/src/learning/sfa");
+            System.out.println(learned);
+//            learned.createDotFile("testEscapingSlashes", "/Users/NW/Documents/Djungarian/SVPAlib/src/learning/sfa");
         } catch (TimeoutException e) {
             e.printStackTrace();
         }
@@ -171,6 +198,19 @@ public class TestAutomaticOutputGeneration extends SymbolicOracle<CharPred, Char
             output +=c;
         }
         System.out.println(output);
+    }
+
+    public static List<Character> stringToCharList(String word) {
+        List<Character> output = new ArrayList<>();
+        if (word == null || word.isEmpty()) {
+            return output;
+        }
+        for (int i=0; i<word.length(); i++) {
+            output.add(word.charAt(i));
+            System.out.println("Char:"+word.charAt(i));
+        }
+        System.out.println("Output upon "+word+" is "+output);
+        return output;
     }
 
 }
