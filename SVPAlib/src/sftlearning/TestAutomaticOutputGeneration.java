@@ -1,3 +1,6 @@
+/**
+ * This file has been made by Sophie Lathouwers
+ */
 package sftlearning;
 
 import org.sat4j.specs.TimeoutException;
@@ -6,7 +9,6 @@ import theory.characters.CharPred;
 import theory.intervals.UnaryCharIntervalSolver;
 import transducers.sft.SFT;
 
-import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;

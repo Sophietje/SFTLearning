@@ -1,3 +1,6 @@
+/**
+ * This file has been made by Sophie Lathouwers
+ */
 package sftlearning;
 
 import org.sat4j.specs.TimeoutException;
