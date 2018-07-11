@@ -13,3 +13,6 @@
 [submodule "Sanitizers/src/hescape"]
 	path = Sanitizers/src/hescape
 	url = https://github.com/k0kubun/hescape
+[submodule "Sanitizers/node_modules/he"]
+	path = Sanitizers/node_modules/he
+	url = https://github.com/mathiasbynens/he
