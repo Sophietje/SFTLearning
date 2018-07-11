@@ -1,3 +1,9 @@
 [submodule "automatark"]
 	path = automatark
 	url = https://github.com/lorisdanto/automatark.git
+[submodule "Sanitizers/encode/he"]
+	path = Sanitizers/encode/he
+	url = https://github.com/mathiasbynens/he
+[submodule "Sanitizers/encode/CyberChef"]
+	path = Sanitizers/encode/CyberChef
+	url = https://github.com/gchq/CyberChef

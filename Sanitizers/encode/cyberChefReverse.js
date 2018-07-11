@@ -1,0 +1,3 @@
+var chef = require("./CyberChef/build/node/Cyberchef.js");
+// Reverses the input
+var reverse = chef.bake(process.argv[2], [{"op":"Reverse", "args":[]}]).then(result => console.log(result.result));
