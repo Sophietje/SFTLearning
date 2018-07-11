@@ -10,3 +10,6 @@
 [submodule "Sanitizers/encode/htmlentities"]
 	path = Sanitizers/encode/htmlentities
 	url = https://github.com/threedaymonk/htmlentities
+[submodule "Sanitizers/src/hescape"]
+	path = Sanitizers/src/hescape
+	url = https://github.com/k0kubun/hescape
