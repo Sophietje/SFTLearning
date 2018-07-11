@@ -7,3 +7,6 @@
 [submodule "Sanitizers/encode/CyberChef"]
 	path = Sanitizers/encode/CyberChef
 	url = https://github.com/gchq/CyberChef
+[submodule "Sanitizers/encode/htmlentities"]
+	path = Sanitizers/encode/htmlentities
+	url = https://github.com/threedaymonk/htmlentities
