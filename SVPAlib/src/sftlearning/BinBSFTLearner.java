@@ -58,7 +58,10 @@ public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
      * @return hypothesis automaton that describes the behaviour of the SUL.
      * @throws TimeoutException
      */
-    public SFT<P, F, S> learn(SymbolicOracle<P, F, S> o, BooleanAlgebraSubst<P, CharFunc, S> ba) throws TimeoutException {
+    public SFT<P, F, S> learn(SymbolicOracle<P, F, S> o, BooleanAlgebraSubst<P, CharFunc, S> ba, long maxMinutes) throws TimeoutException {
+        long start = System.currentTimeMillis();
+        long end = start + maxMinutes*60*1000; // 'maxMinutes' minutes * 60 seconds * 1000 ms/sec
+
         // Initialize variables: table, conjecture, cx (counterexample)
         ObsTable table = new ObsTable(ba.generateWitness(ba.True()));
         SFT<P, F, S> conjecture;
@@ -66,13 +69,13 @@ public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
 
         // While no equivalent hypothesis automaton has been found
         table.fill(o);
-        while (true) {
+        while (true && System.currentTimeMillis() < end) {
             // Close table
             boolean closed = false;
             while (!closed) {
                 if (table.close()) {
-                    System.out.println("The table was not closed!:");
-                    System.out.println(table);
+//                    System.out.println("The table was not closed!:");
+//                    System.out.println(table);
                     // Table was not closed, fill table since strings were added to it in close()
                     table.fill(o);
                 } else {
@@ -94,6 +97,8 @@ public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
             // Process the found counterexample
             table.process(cx, o, ba);
         }
+        System.out.println("TIMED OUT AT: "+System.currentTimeMillis());
+        return null;
     }
 
     /**
@@ -326,7 +331,7 @@ public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
          * @param cx the counterexample that should be processed
          */
         public void process(List<S> cx, SymbolicOracle<P, F, S> o, BooleanAlgebraSubst<P, CharFunc, S> ba) throws TimeoutException {
-            System.out.println("Counterexample is: "+cx);
+//            System.out.println("Counterexample is: "+cx);
             if (cx.size() == 1) {
                 addToTable(cx, o);
             }
@@ -350,12 +355,12 @@ public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
                     same = i;
                 }
             }
-            System.out.println("i0 = "+(diff-1));
+//            System.out.println("i0 = "+(diff-1));
             // Construct s_i0 b
             List<S> wrongTransition = runInHypothesis(o, ba, cx, diff-1);
-            System.out.println("Si0 = "+wrongTransition);
+//            System.out.println("Si0 = "+wrongTransition);
             wrongTransition.add(cx.get(diff-1));
-            System.out.println("Si0 b = "+wrongTransition);
+//            System.out.println("Si0 b = "+wrongTransition);
 
             // Check whether s_i0 b == s_j mod W U {d} for some j ±= i_0 + 1
             // b is a character from the input language
@@ -366,7 +371,7 @@ public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
             } else {
                 // Else, add d to W (E)
                 List<S> dist = new ArrayList<>(getList(cx, diff, cx.size()));
-                System.out.println("d = "+dist);
+//                System.out.println("d = "+dist);
                 if (!E.contains(dist)) {
                     E.add(dist);
                 }
@@ -395,7 +400,7 @@ public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
             SFT<P, F, S> hypothesis = this.buildSFT(o, ba);
 
             int state = hypothesis.getInitialState();
-            System.out.println(hypothesis.toString());
+//            System.out.println(hypothesis.toString());
             List<S> toSimulate = new ArrayList<>(getList(cx, 0, i));
             for (S c : toSimulate) {
                 boolean found = false;
@@ -568,7 +573,6 @@ public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
                 if (w.size() != best_r.size() + 1)
                     continue;
                 if (isPrefix(best_r, w)) {
-                    System.out.println("The table contains the one-step extension "+w);
                     cont = true;
                     break;
                 }
@@ -579,7 +583,6 @@ public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
                 ra.add(arbchar);
                 R.add(ra);
                 SUR.add(ra);
-                System.out.println("ADDED THE FOLLOWING WORD TO THE TABLE: "+ra);
             }
 
             return true;

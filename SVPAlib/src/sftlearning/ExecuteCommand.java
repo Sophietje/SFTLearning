@@ -59,7 +59,11 @@ public class ExecuteCommand {
     }
 
     public static void main(String[] args) {
+        String[] cmdA = new String[args.length-1];
         if (args.length > 0) {
+            for (int i=0; i<args.length-1; i++) {
+                cmdA[i] = args[i];
+            }
             String cmd = "";
             for (int i=0; i<args.length; i++) {
                 cmd += args[i];
@@ -68,7 +72,7 @@ public class ExecuteCommand {
                 }
             }
             System.out.println("Executing the command: "+cmd);
-            String output = executeCommand(cmd);
+            String output = executeCommandPB(cmdA, args[args.length-1]);
             System.out.println("Output received: "+output);
         } else {
             System.out.println("No command has been defined to execute! Please specify a command...");

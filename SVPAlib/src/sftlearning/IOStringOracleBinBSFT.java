@@ -68,7 +68,7 @@ public class IOStringOracleBinBSFT extends SymbolicOracle<CharPred, CharFunc, Ch
         SymbolicOracle o = new IOStringOracleBinBSFT();
         SFT<CharPred, CharFunc, Character> learned = null;
         try {
-            learned = ell.learn(o, ba);
+            learned = ell.learn(o, ba, 120);
 
 //            transducers.sft.SFT.backtrack(outputs, new ArrayList<Character>, learned, 3, new ArrayList<Character>, 0, ba);
 //            learned.createDotFile("testStringOracle", "/Users/NW/Documents/Djungarian/SVPAlib/src/transducers/sft");

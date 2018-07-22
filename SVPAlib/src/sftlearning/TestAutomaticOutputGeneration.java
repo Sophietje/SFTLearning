@@ -18,7 +18,7 @@ public class TestAutomaticOutputGeneration extends SymbolicOracle<CharPred, Char
 
     private Scanner sc;
 
-    private static final String command = "ruby /Users/NW/Documents/Djungarian/Sanitizers/src/escapeHTML.rb";
+    private static final String command = "node /Users/NW/Documents/Djungarian/Sanitizers/encode/reverse.js";
 
     public TestAutomaticOutputGeneration() {
         sc = new Scanner(System.in);
@@ -186,7 +186,7 @@ public class TestAutomaticOutputGeneration extends SymbolicOracle<CharPred, Char
         SymbolicOracle o = new TestAutomaticOutputGeneration();
         SFT<CharPred, CharFunc, Character> learned = null;
         try {
-            learned = ell.learn(o, ba);
+            learned = ell.learn(o, ba, 120);
             System.out.println(learned);
 //            learned.createDotFile("testEscapingSlashes", "/Users/NW/Documents/Djungarian/SVPAlib/src/learning/sfa");
         } catch (TimeoutException e) {

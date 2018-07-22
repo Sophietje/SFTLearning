@@ -9,17 +9,12 @@
  */
 package transducers.sft;
 
-import java.util.List;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.Set;
-import java.util.HashSet;
-import java.util.Collection;
+import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.sat4j.specs.TimeoutException;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static sftlearning.TestAutomaticEquivalenceOracle.getEncodeSpec;
 
 import automata.Automaton;
 import automata.Move;
@@ -27,10 +22,10 @@ import automata.sfa.SFA;
 import automata.sfa.SFAMove;
 import automata.sfa.SFAEpsilon;
 import automata.sfa.SFAInputMove;
+import specifications.CyberchefSpecifications;
 import theory.BooleanAlgebraSubst;
-import theory.characters.CharFunc;
-import theory.characters.CharPred;
-import theory.characters.TermInterface;
+import theory.characters.*;
+import theory.intervals.UnaryCharIntervalSolver;
 import utilities.Pair;
 
 
@@ -530,6 +525,95 @@ public class SFT<P extends CharPred, F extends TermInterface, S> extends Automat
 			backtrack(chains, tempList, sft, steps - 1);
 		}
 		return chains;
+	}
+
+	// With help of: https://github.com/dineshappavoo/bfs-shortestpath/blob/master/src/com/bfs/shortestpath/graph/BFSShortestPath.java
+	public static List<Character> getAccessString(SFT<CharPred, CharFunc, Character> automaton, int endState) throws TimeoutException {
+		// End state == initial state thus the empty list suffices
+		if (automaton.isInitialState(endState)) {
+			return new ArrayList<>();
+		}
+		// Initial state
+		int beginState = automaton.getInitialState();
+//		System.out.println("Start in begin state "+beginState);
+
+		// Maintain map of which states have been visited
+		Map<Integer, Boolean> visited = new HashMap<>();
+		for (int i=0; i < automaton.stateCount(); i++) {
+			visited.put(i, false);
+		}
+		visited.put(beginState, true);
+//		System.out.println("Visited: "+visited.toString());
+		Queue<Pair<Integer, List<Integer>>> queue = new LinkedList<>();
+		queue.add(new Pair<>(beginState, new ArrayList<>()));
+//		System.out.println("Queue: "+queue);
+		while (!queue.isEmpty()) {
+			Pair<Integer, List<Integer>> pair = queue.poll();
+//			System.out.println("Considering the pair "+pair.toString());
+			int current = pair.first;
+			List<Integer> path = pair.second;
+			path.add(current);
+			visited.put(current, true);
+
+			Collection<SFTInputMove<CharPred, CharFunc, Character>> trans = automaton.getInputMovesFrom(current);
+			List<Integer> neighbours = new ArrayList<>();
+			for (SFTInputMove<CharPred, CharFunc, Character> t : trans) {
+				neighbours.add(t.to);
+			}
+
+//			System.out.println("Neighbours: "+neighbours);
+			for (int neighbour : neighbours) {
+				if (neighbour == endState) {
+//					System.out.println("Neighbour is end state "+neighbour);
+					path.add(current);
+					path.add(neighbour);
+					return toInput(automaton, path);
+				}
+				if (visited.get(neighbour)) {
+//					System.out.println("Have already visisted "+neighbour);
+					continue;
+				}
+				path.add(current);
+				queue.add(new Pair<>(neighbour, path));
+				visited.put(neighbour, true);
+//				System.out.println("Current path: "+path);
+//				System.out.println("Current queue: "+queue);
+//				System.out.println("Current visited set: "+visited);
+			}
+		}
+
+		return null;
+	}
+
+	// Construct a path from first state (represented by first integer in list) to last state (last integer in list)
+	// NOTE: ASSUMES Characters satisfy predicates!!
+	private static List<Character> toInput(SFT<CharPred, CharFunc, Character> automaton, List<Integer> path) throws TimeoutException {
+		// First state will be the first element in the list
+		List<Character> input = new ArrayList<>();
+		int i=0;
+		while (i < path.size()-1) {
+			int state = path.get(i);
+			Collection<SFTInputMove<CharPred, CharFunc, Character>> transitions = automaton.getInputMovesFrom(state);
+			for (SFTInputMove<CharPred, CharFunc, Character> t : transitions) {
+				if (t.to == path.get(i+1)) {
+					Character c = null;
+					boolean initialChar = true;
+					// Find random character that satisfies the transition
+					// NOTE: It chooses a random character from a RANGE of the actual complete algebra!
+					while (initialChar || !t.guard.isSatisfiedBy(c)) {
+						int randomChar = ThreadLocalRandom.current().nextInt(1, 400);
+						c = CharPred.MIN_CHAR;
+						for (int k = 0; k < randomChar; k++) {
+							c++;
+						}
+						initialChar = false;
+					}
+					input.add(c);
+				}
+			}
+			i++;
+		}
+		return input;
 	}
 
 	// use backtrack method to get all possible transition chains
@@ -1309,4 +1393,70 @@ public class SFT<P extends CharPred, F extends TermInterface, S> extends Automat
 				s = s + fs + " " + getFinalStatesAndTails().get(fs) + "\n";
 		return s;
 	}
+
+	public static SFT<CharPred, CharFunc, Character> getSpec() {
+		UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
+		int numStates = 1;
+		Map<Integer, Set<List<Character>>> finalStatesAndTails = new HashMap<>();
+		for (int i=0; i<numStates; i++) {
+			finalStatesAndTails.put(i, new HashSet<>());
+		}
+
+		int initial = 0;
+		List<SFTMove<CharPred, CharFunc, Character>> transitions = new LinkedList<>();
+		List<CharPred> guards = new ArrayList<>();
+
+		List<CharFunc> terms = new ArrayList<>();
+		terms.add(new CharConstant('&'));
+		terms.add(new CharConstant('a'));
+		terms.add(new CharConstant('m'));
+		terms.add(new CharConstant('p'));
+		terms.add(new CharConstant(';'));
+		CharPred g = new CharPred('&', '&');
+		transitions.add(new SFTInputMove<>(0, 1, g, terms));
+		guards.add(g);
+
+		transitions.add(new SFTInputMove<>(1, 2, g, terms));
+		guards.add(g);
+
+		terms = new ArrayList<>();
+		terms.add(CharOffset.IDENTITY);
+		transitions.add(new SFTInputMove<>(0, 2, ba.MkNot(g), terms));
+
+
+		CharPred largeGuard = ba.False();
+		List<CharFunc> largeTerms = new ArrayList<>();
+		for (CharPred gg : guards) {
+			largeGuard = ba.MkOr(largeGuard, gg);
+		}
+		largeGuard = ba.MkNot(largeGuard);
+		largeTerms.add(CharOffset.IDENTITY);
+		transitions.add(new SFTInputMove<>(2, 2, largeGuard, largeTerms));
+
+		return MkSFT(transitions, initial, finalStatesAndTails, ba);
+	}
+
+
+	public static void main(String[] args) throws TimeoutException {
+
+//		SFT spec = CyberchefSpecifications.getRemoveWhitespaceSpec();
+//		System.out.println(spec);
+//		for (int i=0; i<spec.stateCount(); i++) {
+//			try {
+//				System.out.println("Access string for "+i+" is "+getAccessString(spec, i));
+//			} catch (TimeoutException e) {
+//				e.printStackTrace();
+//			}
+//
+//		}
+
+
+		SFT spec = getSpec();
+		List<Integer> path = new ArrayList<>();
+		path.add(0);
+		path.add(2);
+		System.out.println(toInput(spec, path));
+
+	}
+
 }

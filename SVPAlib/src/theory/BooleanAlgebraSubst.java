@@ -80,7 +80,7 @@ public abstract class BooleanAlgebraSubst<P extends CharPred,F extends TermInter
 		// predOutputGroups is a map of evidence to output
 		// The evidence will be generalized into predicates here
 		// Also need to generate term functions based on evidence/output-relation
-		System.out.println(ot.toString());
+//		System.out.println(ot.toString());
 		Set<Set<S>> characterGroups = predOutputGroups.keySet();
 
 
@@ -338,15 +338,18 @@ public abstract class BooleanAlgebraSubst<P extends CharPred,F extends TermInter
 										// All functions were the same therefore the predicate does not need to be split
 										left = MkOr((P) left, (P) pr);
 									}
-								} else if (current.equals(subPred.getLeft()) && subPred.getRight() != null && subPred.getRight() != subPred.getLeft()) {
+								} else if (current.equals(subPred.getLeft()) && subPred.getRight() != null && !subPred.getRight().equals(subPred.getLeft())) {
+//									System.out.println("Equal: "+subPred.getRight().equals(subPred.getLeft()));
 //									System.out.println("Splitting sub-predicate into single and rest predicate");
 //									System.out.println("Left predicate = ["+subPred.getLeft()+", "+subPred.getLeft()+"]");
+//									System.out.println(subPred.getLeft() <= subPred.getLeft());
 									left = MkOr((P) left, (P) new CharPred(subPred.getLeft(), subPred.getLeft()));
 									Character split = subPred.getLeft();
 									split++;
-//									System.out.println("Left predicate = ["+split+", "+subPred.getRight()+"]");
+//									System.out.println("Right predicate = ["+split+", "+subPred.getRight()+"]");
+//									System.out.println(split<= subPred.getRight());
 									right = MkOr((P) right, (P) new CharPred(split, subPred.getRight()));
-								} else if (current.equals(subPred.getLeft()) && subPred.getRight() == subPred.getLeft() && !isSplit) {
+								} else if (current.equals(subPred.getLeft()) && subPred.getRight().equals(subPred.getLeft()) && !isSplit) {
 //									System.out.println("Splitting AFTER this single predicate");
 									if (j == ithPred.intervals.size()-1) {
 										// The last single predicate satisfies the predicate, thus it becomes the right predicate

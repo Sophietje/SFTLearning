@@ -1,4 +1,4 @@
-
+/Sanitizers/node_modules/*
 /SVPAlib/target/
 /BooleanAlgebras/target/
 /TestSVPA/target/
