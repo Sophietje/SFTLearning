@@ -104,14 +104,14 @@ public class LTLUnitTest {
 
 		startTime = System.currentTimeMillis();
 
-		Pair<Boolean, List<Character>> b1 = SAFA.areReverseEquivalent(safa1, safa2, ba);
+		boolean b1 = SAFA.areReverseEquivalent(safa1, safa2, ba);
 		System.out.println(b1);
 
 		stopTime = System.currentTimeMillis();
 		elapsedTime = stopTime - startTime;
 		System.out.println(elapsedTime);
 
-		assertTrue(b == b1.first);
+		assertTrue(b == b1);
 
 	}
 
@@ -256,14 +256,14 @@ public class LTLUnitTest {
 
 		startTime = System.currentTimeMillis();
 
-		Pair<Boolean, List<boolean[]>> b1 = SAFA.areReverseEquivalent(safa1, safa2, ba);
+		boolean b1 = SAFA.areReverseEquivalent(safa1, safa2, ba);
 		System.out.println(b1);
 
 		stopTime = System.currentTimeMillis();
 		elapsedTime = stopTime - startTime;
 		System.out.println(elapsedTime);
 
-		assertTrue(b == b1.first);
+		assertTrue(b == b1);
 	}
 
 	@Test

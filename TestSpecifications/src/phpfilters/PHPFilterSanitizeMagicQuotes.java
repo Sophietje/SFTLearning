@@ -28,7 +28,7 @@ public class PHPFilterSanitizeMagicQuotes {
 
     private static final String PATH = "/Users/NW/Documents/Djungarian/TestSpecifications/src/phpfilters/";
 
-    public SFT<CharPred, CharFunc, Character> getSpecification() {
+    public SFT<CharPred, CharFunc, Character> getSpecification() throws TimeoutException {
         // Initialize variables needed for specification (SFT)
         List<SFTMove<CharPred, CharFunc, Character>> transitions = new LinkedList<SFTMove<CharPred, CharFunc, Character>>();
         Integer initialState = 0;

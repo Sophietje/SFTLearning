@@ -12,6 +12,7 @@ package transducers.sft;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
+import org.junit.rules.Timeout;
 import org.sat4j.specs.TimeoutException;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static sftlearning.TestAutomaticEquivalenceOracle.getEncodeSpec;
@@ -82,15 +83,15 @@ public class SFT<P extends CharPred, F extends TermInterface, S> extends Automat
 	*/
 	public static <P extends CharPred, F extends TermInterface, S> SFT<P, F, S> MkSFT(Collection<SFTMove<P, F, S>> transitions, Integer initialState,
 																					  Map<Integer, Set<List<S>>> finalStatesAndTails,
-																					  BooleanAlgebraSubst<P, F, S> ba) {
+																					  BooleanAlgebraSubst<P, F, S> ba) throws TimeoutException {
 		SFT<P, F, S> aut = new SFT<P, F, S>();
 
 		// Initialize state set
 		aut.initialState = initialState;
 
-		for (Integer state: finalStatesAndTails.keySet()) {
+		for (Integer state : finalStatesAndTails.keySet()) {
 			Set<List<S>> tails = new HashSet<List<S>>();
-			for (List<S> tail: finalStatesAndTails.get(state)) {
+			for (List<S> tail : finalStatesAndTails.get(state)) {
 				if (tail.size() != 0) // remove the empty tail which is just an empty List<S> for brevity
 					tails.add(tail);
 			}
@@ -106,10 +107,30 @@ public class SFT<P extends CharPred, F extends TermInterface, S> extends Automat
 		try {
 			for (SFTMove<P, F, S> t : transitions)
 				aut.addTransition(t, ba, false);
-			return aut;
 		} catch (TimeoutException toe) {
 			return null;
 		}
+
+		aut.isDeterministic = aut.checkDeterminism(ba);
+		return aut;
+	}
+
+	private boolean checkDeterminism(BooleanAlgebraSubst<P, F, S> ba) throws TimeoutException {
+		if (!isEpsilonFree) {
+			return false;
+		} else { // check whether transitions of one state have overlapped guards
+			for (Integer state : getStates()) {
+				ArrayList<SFTInputMove<P, F, S>> trset = new ArrayList<SFTInputMove<P, F, S>>(getInputMovesFrom(state));
+				for (int i = 0; i < trset.size(); i++) {
+					for (int j = i + 1; j < trset.size(); j++) {
+						if (ba.IsSatisfiable(ba.MkAnd(trset.get(i).guard, trset.get(j).guard))) {
+							return false;
+						}
+					}
+				}
+			}
+		}
+		return true;
 	}
 
 	public static <P extends CharPred, S> SFT<P, CharFunc, S> MkSFT(List<SFTMove<P, CharFunc, S>> transitions, Integer initialState,
@@ -372,7 +393,7 @@ public class SFT<P extends CharPred, F extends TermInterface, S> extends Automat
 	/**
 	 * return an equivalent copy without epsilon moves
 	 */
-	protected SFT<P, F, S> removeEpsilonMoves(BooleanAlgebraSubst<P, F, S> ba) {
+	protected SFT<P, F, S> removeEpsilonMoves(BooleanAlgebraSubst<P, F, S> ba) throws TimeoutException {
 		return removeEpsilonMovesFrom(this, ba);
 	}
 
@@ -380,7 +401,7 @@ public class SFT<P extends CharPred, F extends TermInterface, S> extends Automat
 	 * return an equivalent copy without epsilon moves
 	 */
 	protected static <P extends CharPred, F extends TermInterface, S> SFT<P, F, S> removeEpsilonMovesFrom(SFT<P, F, S> sft,
-																		 BooleanAlgebraSubst<P, F, S> ba) {
+																		 BooleanAlgebraSubst<P, F, S> ba) throws TimeoutException {
 
 		if (sft.isEpsilonFree)
 			return sft;
@@ -696,8 +717,8 @@ public class SFT<P extends CharPred, F extends TermInterface, S> extends Automat
 					if (tails1.size() > 1 || tails2.size() > 1) // if any final state in any SFT has many tails, their
 						// outputs are uncertain, so 2 SFTs cannot be 1-equality
 						return false;
-					List<F> finalU = new ArrayList<>(u);
-					List<F> finalV = new ArrayList<>(v);
+					List<F> finalU = new ArrayList<F>(u);
+					List<F> finalV = new ArrayList<F>(v);
 					for (List<S> tail: tails1)
 						for (S element: tail)
 							finalU.add(ba.MkFuncConst(element));
@@ -720,14 +741,14 @@ public class SFT<P extends CharPred, F extends TermInterface, S> extends Automat
 							return false;
 
 					// Figure 3 line 9: w := [u_{|v|,\dots,u_{|u|-1}}];
-					List<F> w = new ArrayList<>();
+					List<F> w = new ArrayList<F>();
 					for (int i = v.size(); i < u.size(); i++)
 						w.add(u.get(i));
 
 					// Figure 3 line 9: c := [\![ w]\!](witness(\varphi));
 					S witness = (S)transition.getWitness(ba);
 					List<S> c = new ArrayList<S>();
-					List<F> cF = new ArrayList<>(); // a sequence of lamda x.alpha, where alpha is a constant S
+					List<F> cF = new ArrayList<F>(); // a sequence of lamda x.alpha, where alpha is a constant S
 					// stored in List<S> c
 					for (int i = 0; i < u.size() - v.size(); i++) {
 						c.add(ba.MkSubstFuncConst(w.get(i), witness));
@@ -741,28 +762,29 @@ public class SFT<P extends CharPred, F extends TermInterface, S> extends Automat
 								ba.MkSubstFuncPred(cF.get(i), (P)transition.guard)))
 							return false;
 
-					if (reached.containsKey(currState) && !reached.get(currState).equals(new Pair(c, new ArrayList<S>())))
+					Integer nextState = transition.to;
+					if (reached.containsKey(nextState) && !reached.get(nextState).equals(new Pair(c, new ArrayList<S>())))
 						return false;
 
 					// Figure 3 line 11: \textbf{if} \ q \not\in Dom(Q) \ push(q,S);
-					if (!reached.containsKey(currState)) {
-						toVisit.push(currState);
+					if (!reached.containsKey(nextState)) {
+						toVisit.push(nextState);
 
 						// Figure 3 line 11: Q(q):=(\textbf c, \epsilon);
-						reached.put(currState, new Pair(c, new ArrayList<S>()));
+						reached.put(nextState, new Pair(c, new ArrayList<S>()));
 					}
 
-				// Figure 3 line 12: \textbf{if} \ |u|<|v| \dots (symmetrical \ to \ the \  case \ |u|>|v|)
+					// Figure 3 line 12: \textbf{if} \ |u|<|v| \dots (symmetrical \ to \ the \  case \ |u|>|v|)
 				} else { // u.size() < v.size()
 					for (int i = 0; i < u.size(); i++)
 						if (!ba.CheckGuardedEquality((P) transition.guard, u.get(i), v.get(i)))
 							return false;
-					List<F> w = new ArrayList<>();
+					List<F> w = new ArrayList<F>();
 					for (int i = u.size(); i < v.size(); i++)
 						w.add(v.get(i));
 					S witness = (S)transition.getWitness(ba);
 					List<S> c = new ArrayList<S>();
-					List<F> cF = new ArrayList<>(); // a sequence of lamda x.alpha, where alpha is a constant S
+					List<F> cF = new ArrayList<F>(); // a sequence of lamda x.alpha, where alpha is a constant S
 					// stored in List<S> c
 					for (int i = 0; i < v.size() - u.size(); i++) {
 						c.add(ba.MkSubstFuncConst(w.get(i), witness));
@@ -772,11 +794,12 @@ public class SFT<P extends CharPred, F extends TermInterface, S> extends Automat
 						if (!ba.AreEquivalent(ba.MkSubstFuncPred(w.get(i), (P)transition.guard),
 								ba.MkSubstFuncPred(cF.get(i), (P)transition.guard)))
 							return false;
-					if (reached.containsKey(currState) && !reached.get(currState).equals(new Pair(new ArrayList<S>(), c)))
+					Integer nextState = transition.to;
+					if (reached.containsKey(nextState) && !reached.get(nextState).equals(new Pair(new ArrayList<S>(), c)))
 						return false;
-					if (!reached.containsKey(currState)) {
-						toVisit.push(currState);
-						reached.put(currState, new Pair(new ArrayList<S>(), c));
+					if (!reached.containsKey(nextState)) {
+						toVisit.push(nextState);
+						reached.put(nextState, new Pair(new ArrayList<S>(), c));
 					}
 				}
 			}
@@ -960,7 +983,7 @@ public class SFT<P extends CharPred, F extends TermInterface, S> extends Automat
 	 *
 	 * @return corresponding sft
 	 */
-	private static <P extends CharPred, F extends TermInterface, S> SFT<P, F, S> SFAtoSFT(SFA<P, S> sfa, BooleanAlgebraSubst<P, F, S> ba) {
+	private static <P extends CharPred, F extends TermInterface, S> SFT<P, F, S> SFAtoSFT(SFA<P, S> sfa, BooleanAlgebraSubst<P, F, S> ba) throws TimeoutException {
 		Collection<SFTMove<P, F, S>> transitions = new ArrayList<>();
 		for (Integer state: sfa.getStates()) {
 			for (SFAInputMove<P, S> transition: sfa.getInputMovesFrom(state)) {
@@ -1394,7 +1417,7 @@ public class SFT<P extends CharPred, F extends TermInterface, S> extends Automat
 		return s;
 	}
 
-	public static SFT<CharPred, CharFunc, Character> getSpec() {
+	public static SFT<CharPred, CharFunc, Character> getSpec() throws TimeoutException {
 		UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
 		int numStates = 1;
 		Map<Integer, Set<List<Character>>> finalStatesAndTails = new HashMap<>();

@@ -36,7 +36,6 @@ public class TestAutomaticEquivalenceOracle extends SymbolicOracle<CharPred, Cha
     private static int maxTestsPerTransition = 100;
     private static int maxTestsPerPred = 50;
     private static int EO = 0;
-//    String command = null;
 
     public TestAutomaticEquivalenceOracle() {
         sc = new Scanner(System.in);
@@ -395,9 +394,9 @@ public class TestAutomaticEquivalenceOracle extends SymbolicOracle<CharPred, Cha
     // Equivalence oracle that achieves predicate coverage in the hypothesis automaton
     public List<Character> stateCoverageEO(SFT<CharPred, CharFunc, Character> hypothesis) throws TimeoutException {
         for (int i=0; i<hypothesis.stateCount(); i++) {
-            System.out.println("Testing state: "+i);
+//            System.out.println("Testing state: "+i);
             for (int j=0; j<maxTestsPerState; j++) {
-                System.out.println("Testing the state for the "+j+"-th time");
+//                System.out.println("Testing the state for the "+j+"-th time");
                 List<Character> input = new ArrayList<>();
                 input.addAll(getAccessString(hypothesis, i));
                 for (int k=0; k<maxLength; k++) {
@@ -410,7 +409,7 @@ public class TestAutomaticEquivalenceOracle extends SymbolicOracle<CharPred, Cha
                 }
 
                 if (!hypothesis.outputOn(input, ba).equals(o.checkMembership(input))) {
-                    System.out.println("Found a counterexample: "+input);
+//                    System.out.println("Found a counterexample: "+input);
                     return input;
                 }
             }
@@ -487,7 +486,7 @@ public class TestAutomaticEquivalenceOracle extends SymbolicOracle<CharPred, Cha
         return resultCharacters;
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws TimeoutException {
         System.out.println("Which Equivalence Oracle to use?");
         System.out.println("1: Random");
         System.out.println("2: Random transition");
@@ -579,7 +578,7 @@ public class TestAutomaticEquivalenceOracle extends SymbolicOracle<CharPred, Cha
     }
 
 
-    public static SFT<CharPred, CharFunc, Character> getEncodeSpec() {
+    public static SFT<CharPred, CharFunc, Character> getEncodeSpec() throws TimeoutException {
         UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
         int numStates = 3;
         Map<Integer, Set<List<Character>>> finalStatesAndTails = new HashMap<>();
@@ -640,7 +639,7 @@ public class TestAutomaticEquivalenceOracle extends SymbolicOracle<CharPred, Cha
         return MkSFT(transitions, initial, finalStatesAndTails, ba);
     }
 
-    public static SFT<CharPred, CharFunc, Character> getEscapeSpec() {
+    public static SFT<CharPred, CharFunc, Character> getEscapeSpec() throws TimeoutException {
         UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
         int numStates = 2;
         Map<Integer, Set<List<Character>>> finalStatesAndTails = new HashMap<>();

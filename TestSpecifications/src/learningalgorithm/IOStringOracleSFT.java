@@ -56,16 +56,16 @@ public class IOStringOracleSFT extends SymbolicOracle<CharPred, CharFunc, Charac
     }
 
     public static void main(String[] args) {
-        UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
-        SFTLearner ell = new SFTLearner();
-        SymbolicOracle o = new IOStringOracleSFT();
-        SFT<CharPred, CharFunc, Character> learned = null;
-        try {
-            learned = ell.learn(o, ba);
-            learned.createDotFile("testStringOracle", "/Users/NW/Documents/Djungarian/SVPAlib/src/learning/sfa");
-        } catch (TimeoutException e) {
-            e.printStackTrace();
-        }
+//        UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
+//        SFTLearner ell = new SFTLearner();
+//        SymbolicOracle o = new IOStringOracleSFT();
+//        SFT<CharPred, CharFunc, Character> learned = null;
+//        try {
+//            learned = ell.learn(o, ba);
+//            learned.createDotFile("testStringOracle", "/Users/NW/Documents/Djungarian/SVPAlib/src/learning/sfa");
+//        } catch (TimeoutException e) {
+//            e.printStackTrace();
+//        }
     }
 
 }

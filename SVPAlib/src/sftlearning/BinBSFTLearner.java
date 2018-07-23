@@ -64,7 +64,7 @@ public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
 
         // Initialize variables: table, conjecture, cx (counterexample)
         ObsTable table = new ObsTable(ba.generateWitness(ba.True()));
-        SFT<P, F, S> conjecture;
+        SFT<P, F, S> conjecture = null;
         List<S> cx;
 
         // While no equivalent hypothesis automaton has been found
@@ -98,7 +98,7 @@ public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
             table.process(cx, o, ba);
         }
         System.out.println("TIMED OUT AT: "+System.currentTimeMillis());
-        return null;
+        return conjecture;
     }
 
     /**

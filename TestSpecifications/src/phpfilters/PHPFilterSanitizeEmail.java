@@ -26,7 +26,7 @@ public class PHPFilterSanitizeEmail {
     static UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
     private static final String PATH = "/Users/NW/Documents/Djungarian/TestSpecifications/src/phpfilters/";
 
-    public SFT<CharPred, CharFunc, Character> getSpecification() {
+    public SFT<CharPred, CharFunc, Character> getSpecification() throws TimeoutException {
         // Initialize variables needed for specification (SFT)
         List<SFTMove<CharPred, CharFunc, Character>> transitions = new LinkedList<SFTMove<CharPred, CharFunc, Character>>();
         Integer initialState = 0;
@@ -59,7 +59,7 @@ public class PHPFilterSanitizeEmail {
     }
 
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws TimeoutException {
         // Build specification
         SFT sanitizer = new PHPFilterSanitizeEmail().getSpecification();
 
