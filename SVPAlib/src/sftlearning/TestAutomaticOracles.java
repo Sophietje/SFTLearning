@@ -300,15 +300,18 @@ public class TestAutomaticOracles extends SymbolicOracle<CharPred, CharFunc, Cha
                 for (int i=0; i<maxTestsPerTransition; i++) {
                     List<Character> input = new ArrayList<>();
                     // Start in the state
-                    input.addAll(getAccessString(hypothesis, state));
+                    List<Character> accString = getAccessString(hypothesis, state);
+
                     Character c = CharPred.MIN_CHAR;
+                    boolean first = true;
                     // Generate character which satisfies the guard of the transition
-                    while (c != null && !trans.hasModel(c, ba)) {
+                    while (first || !trans.hasModel(c, ba)) {
                         int random = ThreadLocalRandom.current().nextInt(1, 400);
                         c = CharPred.MIN_CHAR;
                         for (int k = 0; k<random; k++) {
                             c++;
                         }
+                        first = false;
                     }
                     input.add(c);
 
@@ -349,12 +352,14 @@ public class TestAutomaticOracles extends SymbolicOracle<CharPred, CharFunc, Cha
                         Character c = CharPred.MIN_CHAR;
                         // Generate character which satisfies the guard of the transition
 
-                        while (c != null && (trans.guard.intervals.get(i).getLeft() > c || trans.guard.intervals.get(i).getRight() < c)) {
+                        boolean first = true;
+                        while (first || (trans.guard.intervals.get(i).getLeft() > c || trans.guard.intervals.get(i).getRight() < c)) {
                             int random = ThreadLocalRandom.current().nextInt(1, 400);
                             c = CharPred.MIN_CHAR;
                             for (int k = 0; k < random; k++) {
                                 c++;
                             }
+                            first = false;
                         }
                         input.add(c);
 
