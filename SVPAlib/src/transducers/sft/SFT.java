@@ -77,6 +77,19 @@ public class SFT<P extends CharPred, F extends TermInterface, S> extends Automat
 		initialState = 0;
 	}
 
+	/**
+	 * Checks whether two symbolic finite transducers are the same, i.e., if they are domain and partial equivalent
+	 * @param sft1 symbolic finite transducer
+	 * @param sft2 symbolic finite transducer
+	 * @return true if the symbolic finite transducers are the same
+	 * @throws TimeoutException
+	 */
+	public static boolean equals(SFT<CharPred, CharFunc, Character> sft1, SFT<CharPred, CharFunc, Character> sft2) throws TimeoutException {
+		SFA<CharPred, Character> domain1 = sft1.getDomain(new UnaryCharIntervalSolver());
+		SFA<CharPred, Character> domain2 = sft2.getDomain(new UnaryCharIntervalSolver());
+		return domain1.isEquivalentTo(domain2, new UnaryCharIntervalSolver()) && sft1.decide1equality(sft2, new UnaryCharIntervalSolver());
+	}
+
 	/*
 	* Create a SFT (removes unreachable states)
 	* Page 3, left column, the last 4 lines, definition 2
