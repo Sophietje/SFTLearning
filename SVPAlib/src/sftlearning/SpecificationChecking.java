@@ -197,8 +197,16 @@ public class SpecificationChecking {
         return SFT.equals(composed1, composed2);
     }
 
-    public static List<Character> getBadInput(SFT<CharPred, CharFunc, Character> sft, String output) throws TimeoutException {
-        // TODO: Make sure this times out after a certain time?
+    /**
+     * Returns the input that corresponds to a given output in a specified sft
+     * It has 5 minutes to find a corresponding input, otherwise the process is terminated
+     *
+     * @param sft symbolic finite transducer
+     * @param output output to which we want to find the corresponding input
+     * @return input corresponding to output in sft, if no input is found then it will return null
+     * @throws TimeoutException
+     */
+    public static List<Character> getBadInput(SFT<CharPred, CharFunc, Character> sft, String output) {
         List<Character> result = null;
         BadInputTask badInputTask = new BadInputTask(sft, output);
 
@@ -225,6 +233,9 @@ public class SpecificationChecking {
         return result;
     }
 
+    /**
+     * Executable task which calls depth-first search to find input corresponding to output in sft
+     */
     public static class BadInputTask implements Callable<List<Character>> {
         List<Character> result = null;
         SFT<CharPred, CharFunc, Character> sft;
@@ -246,6 +257,14 @@ public class SpecificationChecking {
         }
     }
 
+    /**
+     * Depth-first search that searches for input corresponding to specified output in sft starting in a given state
+     * @param sft symbolic finite transducer
+     * @param output output to which we want to find a corresponding input
+     * @param state state from which we need to start reasoning
+     * @return input corresponding to output if found, otherwise null
+     * @throws TimeoutException
+     */
     private static List<Character> dfs(SFT<CharPred, CharFunc, Character> sft, String output, int state) throws TimeoutException {
         if (output.isEmpty()) {
             return new ArrayList<>();
