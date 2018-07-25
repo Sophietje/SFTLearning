@@ -1,7 +1,13 @@
+/**
+ * This file has been made by Sophie Lathouwers
+ */
+
 package sftlearning;
 
 import automata.sfa.SFA;
 import org.sat4j.specs.TimeoutException;
+import specifications.CyberchefSpecifications;
+import theory.BooleanAlgebraSubst;
 import theory.characters.CharConstant;
 import theory.characters.CharFunc;
 import theory.characters.CharOffset;
@@ -12,6 +18,7 @@ import transducers.sft.SFTInputMove;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.*;
 
 /**
  * This class contains methods for checking specifications of an SFT
@@ -24,7 +31,7 @@ import java.util.List;
  * - Length inequality (input or output)
  * - Idempotency
  * - Commutativity
- * - Get bad input for given output
+ * - Get (bad) input which results in given (bad) output
  */
 public class SpecificationChecking {
 
@@ -190,34 +197,94 @@ public class SpecificationChecking {
         return SFT.equals(composed1, composed2);
     }
 
-    public static List<Character> getBadInput(SFT<CharPred, CharFunc, Character> sft, String output, long timeout) throws TimeoutException {
+    public static List<Character> getBadInput(SFT<CharPred, CharFunc, Character> sft, String output) throws TimeoutException {
         // TODO: Make sure this times out after a certain time?
-        int state = sft.getInitialState();
-        List<Character> input = new ArrayList<Character>();
-        return dfs(sft, output, state);
+        List<Character> result = null;
+        BadInputTask badInputTask = new BadInputTask(sft, output);
+
+        // Program may run for a maximum of 5 minutes
+        long maxRuntime = 5;
+        ExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+        try {
+            result = executor.submit(badInputTask).get(maxRuntime, TimeUnit.MINUTES);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        } catch (java.util.concurrent.TimeoutException e) {
+            System.out.println("Could not find an input corresponding to the output within the available time");
+        }
+        executor.shutdown();
+        try {
+            if (executor.awaitTermination(100, TimeUnit.MILLISECONDS)) {
+                executor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return result;
+    }
+
+    public static class BadInputTask implements Callable<List<Character>> {
+        List<Character> result = null;
+        SFT<CharPred, CharFunc, Character> sft;
+        String output;
+
+        public BadInputTask(SFT<CharPred, CharFunc, Character> sft, String output) {
+            this.sft = sft;
+            this.output = output;
+        }
+
+        @Override
+        public List<Character> call() throws Exception {
+            try {
+                return dfs(sft, output, sft.getInitialState());
+            } catch (TimeoutException e) {
+                e.printStackTrace();
+            }
+            return null;
+        }
     }
 
     private static List<Character> dfs(SFT<CharPred, CharFunc, Character> sft, String output, int state) throws TimeoutException {
+        if (output.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        BooleanAlgebraSubst ba = new UnaryCharIntervalSolver();
         List<Character> input = new ArrayList<>();
 
         boolean noIDFunctions = true;
         for (SFTInputMove<CharPred, CharFunc, Character> trans : sft.getInputMovesFrom(state)) {
+            boolean foundTrans = false;
             // First get output given when taking this transition
             List<Character> outputTrans = new ArrayList<>();
+            List<CharFunc> typeOutputTrans = new ArrayList<>();
             for (int i=0; i<trans.outputFunctions.size(); i++) {
                 CharFunc f = trans.outputFunctions.get(i);
                 if (f instanceof CharConstant) {
                     outputTrans.add(((CharConstant) f).c);
+                    typeOutputTrans.add(f);
+                    foundTrans = true;
+                    break;
                 } else {
-                    noIDFunctions = false;
                     // It was an identity function, assume value on location i in specified output
-                    if (trans.hasModel(output.charAt(i), new UnaryCharIntervalSolver())) {
+                    if (trans.hasModel(output.charAt(i), ba)) {
+                        noIDFunctions = false;
                         outputTrans.add(output.charAt(i));
+                        typeOutputTrans.add(CharOffset.IDENTITY);
+                        foundTrans = true;
+                        break;
                     }
-                    // Not the correct output functions so move on to next transition
-                    continue;
+                    // Not the correct output¢ functions so move on to next transition
+                    // TODO: FIX deze continue, hij gaat naar de volgende in outputFunctions maar je moet naar de volgende transitie
+                    break;
                 }
             }
+            if (!foundTrans) {
+                continue;
+            }
+
 
             String limitedOutput = output.substring(0, outputTrans.size());
             List<Character> subsetOutput = new ArrayList<>();
@@ -230,13 +297,34 @@ public class SpecificationChecking {
             if (subsetOutput.equals(outputTrans)) {
                 // Find character which is needed to take the transition
                 // if there are no identity functions, then this will simply be some character that satisfies the transition
+                char c = CharPred.MIN_CHAR;
                 if (noIDFunctions) {
-
+                    boolean first = true;
+                    while (first || !trans.hasModel(c, ba)) {
+                        int random = ThreadLocalRandom.current().nextInt(1, 400);
+                        for (int i=0; i<random; i++) {
+                            c++;
+                        }
+                        first = false;
+                    }
+                } else {
+                    // If there are identity functions in the set of output functions,
+                    // Then we need to find the location of the output function, and find the corresponding character in the specified output
+                    for (int i=0; i<typeOutputTrans.size(); i++) {
+                        if (typeOutputTrans.get(i) == CharOffset.IDENTITY) {
+                            c = subsetOutput.get(i);
+                            break;
+                        }
+                    }
+                    if (!trans.hasModel(c, ba)) {
+                        continue;
+                    }
                 }
 
-                // If there are identity functions in the set of output functions,
-                // Then we need to find the location of the output function, and find the corresponding character in the specified output
-
+                input.add(c);
+                String newOutput = output.substring(trans.outputFunctions.size(), output.length());
+                input.addAll(dfs(sft, newOutput, trans.to));
+                return input;
             } else {
                 // Output functions do not match the expected output so move on to next transition
                 continue;
@@ -244,5 +332,16 @@ public class SpecificationChecking {
         }
 
         return null;
+    }
+
+    public static void main(String[] args) {
+        try {
+            SFT sft = CyberchefSpecifications.getLowercaseSpec();
+            System.out.println(sft);
+            System.out.println(getBadInput(sft, "dmphjkolf"));
+
+        } catch (TimeoutException e) {
+            e.printStackTrace();
+        }
     }
 }
