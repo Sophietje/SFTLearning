@@ -210,7 +210,6 @@
 //         * - Add all prefixes of the counterexample in Character
 //         * This is the same strategy as in the L* algorithm
 //         *
-//         * TODO: Can be optimized (see back in black paper) by making sure to keep the table reduced
 //         * @param cx the counterexample that should be processed
 //         */
 //        private void processLStar(List<Character> cx) {

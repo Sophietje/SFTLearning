@@ -55,7 +55,7 @@ public class TestAutomaticOutputGeneration extends SymbolicOracle<CharPred, Char
 
 //    @Override
 //    protected List<Character> checkMembershipImpl(List<Character> w) {
-//        // TODO: Use exec() call to call appropriate command to execute Python/Ruby/PHP/etc.
+//        //
 ////        try {
 ////            Process p = Runtime.getRuntime().exec("python test.py abc<>&<>&ab\\c");
 ////            InputStream inputStream = p.getInputStream();
@@ -83,7 +83,6 @@ public class TestAutomaticOutputGeneration extends SymbolicOracle<CharPred, Char
             input += c;
         }
         String output = ExecuteCommand.executeCommandPB(command.split(" "), input);
-        // TODO: Use exec() call to call appropriate command to execute Python/Ruby/PHP/etc.
         return stringToCharList(output);
     }
 

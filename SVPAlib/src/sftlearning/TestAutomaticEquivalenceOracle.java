@@ -73,7 +73,6 @@ public class TestAutomaticEquivalenceOracle extends SymbolicOracle<CharPred, Cha
      */
     @Override
     protected List<Character> checkMembershipImpl(List<Character> w) {
-        // TODO: Use exec() call to call appropriate command to execute Python/Ruby/PHP/etc.
         return escape(w);
     }
 

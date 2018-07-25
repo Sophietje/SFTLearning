@@ -245,7 +245,6 @@ public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
                     }
                     Pair<List<S>, List<FunctionType>> pair = new Pair<>(answer, functionTypes);
                     f.put(s, pair);
-                    // TODO: Moet ik het hier wel aan de tabel toevoegen?
                     addToTable(s, o);
                     return pair;
                 }
@@ -327,7 +326,6 @@ public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
          * To do when processing a counterexample:
          * - Add all prefixes of the counterexample in S
          *
-         * TODO: Can be optimized (see back in black paper) by making sure to keep the table reduced
          * @param cx the counterexample that should be processed
          */
         public void process(List<S> cx, SymbolicOracle<P, F, S> o, BooleanAlgebraSubst<P, CharFunc, S> ba) throws TimeoutException {
@@ -412,7 +410,6 @@ public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
                     }
                 }
                 if (!found) {
-                    // TODO: Vind cases waarin dit gebeurt en go fix!
                     // Komt door SFT die incomplete/not total is?
                     System.out.println("AAAH stuk: kon geen matchende transitie vinden");
                 }
@@ -493,11 +490,11 @@ public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
             HashMap<Integer, Set<List<S>>> fin = new HashMap<>();
             for (int i = 0; i < S.size(); i++) {
                 // Add state i to final states if f(i) = true
-                // TODO: We assume that all states are accepting
-                // TODO: In reality all rows for which the first column (extension = []) is accepting, should be an accepting state
-                // TODO: ALSO in reality many sanitizers do not reject any output, instead they then simply output the empty string
-                // TODO: And we CANNOT detect the difference between outputting an empty string or rejecting an output in this case, thus likely we can assume that sanitizers accept all inputs??
-                // TODO: This answer can be found by looking into examples of the behaviour of sanitizers
+                // NOTE: We assume that all states are accepting
+                // NOTE: In reality all rows for which the first column (extension = []) is accepting, should be an accepting state
+                // NOTE: ALSO in reality many sanitizers do not reject any output, instead they then simply output the empty string
+                // NOTE: And we CANNOT detect the difference between outputting an empty string or rejecting an output in this case, thus likely we can assume that sanitizers accept all inputs??
+                // NOTE: This answer can be found by looking into examples of the behaviour of sanitizers
                 fin.put(i, new HashSet<>());
             }
             SFT ret = SFT.MkSFT(moves, init, fin, ba);

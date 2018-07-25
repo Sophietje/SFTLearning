@@ -296,7 +296,6 @@ public class SpecificationChecking {
                         break;
                     }
                     // Not the correct output¢ functions so move on to next transition
-                    // TODO: FIX deze continue, hij gaat naar de volgende in outputFunctions maar je moet naar de volgende transitie
                     break;
                 }
             }

@@ -277,7 +277,6 @@ public abstract class BooleanAlgebraSubst<P extends CharPred,F extends TermInter
 				if (ithPred.isSatisfiedBy(extension) && !isSplit) {
 //					System.out.println("The predicate is satisfied");
 					// Then we need to check whether the predicate needs to be split into multiple predicates
-					// TODO: check whether we can look up correct value in table for (word + [])
 					// Find value in table:
 					Map<List<Character>, Pair<List<Character>, List<CharFunc>>> f = ot.getF();
 					List<Character> output = f.get(word).getKey();
