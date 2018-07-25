@@ -1,3 +1,5 @@
+package src;
+
 import org.apache.commons.lang3.StringEscapeUtils;
 
 public class EscapeHTML {
