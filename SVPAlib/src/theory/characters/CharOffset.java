@@ -31,7 +31,7 @@ public class CharOffset implements CharFunc {
 
 	@Override
 	public String toString() {
-		return String.format("x + %d", increment);
+		return String.format("x+%d", increment);
 	}
 
 	public CharFunc substIn(CharFunc f1) {
