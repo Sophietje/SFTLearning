@@ -67,11 +67,12 @@ public class SFTInputMove<P, F, S> extends SFTMove<P, F, S>{
 
 	@Override
 	public String toDotString() {
-		StringBuilder label = new StringBuilder(guard + "/\n");
+		StringBuilder label = new StringBuilder(guard + "/");
 		for (F outputFunction: outputFunctions) {
 			label.append(outputFunction.toString());
-			label.append('\n');
+			label.append(' ');
 		}
+		label.delete(label.length()-1, label.length());
 		return String.format("%s -> %s [label=\"%s\"]\n", from, to, label.toString());
 	}
 
