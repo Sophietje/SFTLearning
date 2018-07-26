@@ -10,6 +10,10 @@ import automata.sfa.SFAInputMove;
 import automata.sfa.SFAMove;
 import com.google.common.collect.ImmutableList;
 import org.sat4j.specs.TimeoutException;
+import sftlearning.BinBSFTLearner;
+import sftlearning.ReadSpecification;
+import sftlearning.SymbolicOracle;
+import sftlearning.TestAutomaticOracles;
 import theory.characters.CharFunc;
 import theory.intervals.UnaryCharIntervalSolver;
 import transducers.sft.SFT;
@@ -60,45 +64,48 @@ public class PHPFilterSanitizeEmail {
 
 
     public static void main(String[] args) throws TimeoutException {
-        // Build specification
-        SFT sanitizer = new PHPFilterSanitizeEmail().getSpecification();
-
-        // Check whether input "" is accepted
-        // Check what happens to the input "829qanwsbdhauap.@di"
-        // Check what happens to the input "\abc(})"
-//        System.out.println(sanitizer.accepts(toList(""), ba));
-//        System.out.println(sanitizer.accepts(toList("829qanwsbdhauap.@di"), ba));
-//        System.out.println(sanitizer.accepts(toList("\\{abc)}"), ba));
-//        System.out.println(sanitizer.accepts(toList("!#$%&'*+-=?^_`{|}~@.[]"), ba));
-//        System.out.println(sanitizer.accepts(toList("™⁄‹›ﬁﬂ‡°·‚—±”’Æ»Ú˘¯§"), ba));
-        testSanitizer(sanitizer, "829qanwsbdhauap.@di");
-        testSanitizer(sanitizer, "\\{abc)}");
-        testSanitizer(sanitizer, "!#$%&'*+-=?^_`{|}~@.[]");
-        testSanitizer(sanitizer, "™⁄‹›ﬁﬂ‡°·‚—±”’Æ»Ú˘¯§");
-        sanitizer.createDotFile("PHPFilterSanitizeEmail", PATH);
-
-
-        SFA out = null;
-        try {
-            out = sanitizer.getOutputSFA(ba);
-            out.createDotFile("PHPFilterSanitizeEmail-Output", PATH);
-
-            SFT<CharPred, CharFunc, Character> composed = sanitizer.composeWith((SFT) sanitizer.clone(), ba);
-            boolean idempotent = composed.decide1equality(sanitizer, ba);
-            System.out.println("The sanitizer is idempotent: "+idempotent);
-
-            System.out.println("-----");
-            SFA<CharPred, Character> badOutput = PHPFilterSanitizeEmail.getBadOutputSFT();
-            SFA input = sanitizer.inverseImage(badOutput, ba);
-            input.createDotFile("PHPFilterSanitizeEmailBadInputs", PATH);
-            System.out.println("Set of bad inputs is empty: "+input.isEmpty());
-        } catch (TimeoutException e) {
-            e.printStackTrace();
-        } catch (UnsupportedOperationException e) {
-            System.out.println("ERR: Could not compute output SFA due to multiple outputfunctions for one transition");
-        }
-
-
+//        // Build specification
+//        SFT sanitizer = new PHPFilterSanitizeEmail().getSpecification();
+//
+//        // Check whether input "" is accepted
+//        // Check what happens to the input "829qanwsbdhauap.@di"
+//        // Check what happens to the input "\abc(})"
+////        System.out.println(sanitizer.accepts(toList(""), ba));
+////        System.out.println(sanitizer.accepts(toList("829qanwsbdhauap.@di"), ba));
+////        System.out.println(sanitizer.accepts(toList("\\{abc)}"), ba));
+////        System.out.println(sanitizer.accepts(toList("!#$%&'*+-=?^_`{|}~@.[]"), ba));
+////        System.out.println(sanitizer.accepts(toList("™⁄‹›ﬁﬂ‡°·‚—±”’Æ»Ú˘¯§"), ba));
+//        testSanitizer(sanitizer, "829qanwsbdhauap.@di");
+//        testSanitizer(sanitizer, "\\{abc)}");
+//        testSanitizer(sanitizer, "!#$%&'*+-=?^_`{|}~@.[]");
+//        testSanitizer(sanitizer, "™⁄‹›ﬁﬂ‡°·‚—±”’Æ»Ú˘¯§");
+//        sanitizer.createDotFile("PHPFilterSanitizeEmail", PATH);
+//
+//
+//        SFA out = null;
+//        try {
+//            out = sanitizer.getOutputSFA(ba);
+//            out.createDotFile("PHPFilterSanitizeEmail-Output", PATH);
+//
+//            SFT<CharPred, CharFunc, Character> composed = sanitizer.composeWith((SFT) sanitizer.clone(), ba);
+//            boolean idempotent = composed.decide1equality(sanitizer, ba);
+//            System.out.println("The sanitizer is idempotent: "+idempotent);
+//
+//            System.out.println("-----");
+//            SFA<CharPred, Character> badOutput = PHPFilterSanitizeEmail.getBadOutputSFT();
+//            SFA input = sanitizer.inverseImage(badOutput, ba);
+//            input.createDotFile("PHPFilterSanitizeEmailBadInputs", PATH);
+//            System.out.println("Set of bad inputs is empty: "+input.isEmpty());
+//        } catch (TimeoutException e) {
+//            e.printStackTrace();
+//        } catch (UnsupportedOperationException e) {
+//            System.out.println("ERR: Could not compute output SFA due to multiple outputfunctions for one transition");
+//        }
+        SFT spec = new PHPFilterSanitizeEmail().getSpecification();
+        spec.createDotFile("testingSFTParser", PATH);
+        SFT read = ReadSpecification.read(PATH+"testingSFTParser.dot");
+        read.createDotFile("testingSFTParserRead", PATH);
+        System.out.println(SFT.equals(spec, read));
     }
 
     static SFA<CharPred, Character> getBadOutputSFT() {
