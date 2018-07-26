@@ -10,6 +10,7 @@ import automata.sfa.SFAInputMove;
 import automata.sfa.SFAMove;
 import com.google.common.collect.ImmutableList;
 import org.sat4j.specs.TimeoutException;
+import sftlearning.ReadSpecification;
 import theory.characters.CharConstant;
 import theory.characters.CharFunc;
 import theory.characters.CharPred;
@@ -64,40 +65,45 @@ public class PHPFilterSanitizeMagicQuotes {
 
     public static void main(String[] args) throws TimeoutException {
         // Build specification
-        SFT sanitizer = new PHPFilterSanitizeMagicQuotes().getSpecification();
-
-        // Check whether input "" is accepted
-        // Check what happens to the input "829qanwsbdhauap.@di"
-        // Check what happens to the input "\abc(})"
-        System.out.println(sanitizer.accepts(toList(""), ba));
-        System.out.println(sanitizer.accepts(toList("829qanwsbdhauap.@di"), ba));
-        System.out.println(sanitizer.accepts(toList("\\{abc)}"), ba));
-        System.out.println(sanitizer.accepts(toList("!#$%&'*+-=?^_`{|}~@.[]"), ba));
-        System.out.println(sanitizer.accepts(toList("™⁄‹›ﬁﬂ‡°·‚—±”’Æ»Ú˘¯§"), ba));
-        testSanitizer(sanitizer, "829qanwsbdhauap.@di");
-        testSanitizer(sanitizer, "\\{abc)}");
-        testSanitizer(sanitizer, "!#$%&'*+-=?^_`{|}~@.[]");
-        testSanitizer(sanitizer, "™⁄‹›ﬁﬂ‡°·‚—±”’Æ»Ú˘¯§");
-        testSanitizer(sanitizer, "\\'\"");
-        testSanitizer(sanitizer, "a'b");
-        sanitizer.createDotFile("PHPFilterSanitizeMagicQuotes", PATH);
+        SFT spec = new PHPFilterSanitizeMagicQuotes().getSpecification();
+        spec.createDotFile("testingSFTParserQuotes", PATH);
+        SFT read = ReadSpecification.read(PATH+"testingSFTParserQuotes.dot");
+        read.createDotFile("testingSFTParserQuotesRead", PATH);
+        System.out.println("The read and written file are equal: "+SFT.equals(spec, read));
 
 
-        // TODO: Got a not-implemented error when executing this due to the fact that there are more than 1 transitions?
-        SFA out = sanitizer.getOutputSFA(ba);
-        out.createDotFile("PHPFilterSanitizeMagicQuotesOutput", PATH);
-
-        SFT<CharPred, CharFunc, Character> composed = sanitizer.composeWith((SFT) sanitizer.clone(), ba);
-        boolean idempotent = composed.decide1equality(sanitizer, ba);
-        // Should not be idempotent
-        System.out.println("The sanitizer is idempotent: "+idempotent);
-
-
-        System.out.println("-----");
-        SFA<CharPred, Character> badOutput = PHPFilterSanitizeMagicQuotes.getBadOutputSFT();
-        SFA input = sanitizer.inverseImage(badOutput, ba);
-        input.createDotFile("PHPFilterSanitizeMagicQuotesBadInputs", PATH);
-        System.out.println("Set of bad inputs is empty: "+input.isEmpty());
+//        // Check whether input "" is accepted
+//        // Check what happens to the input "829qanwsbdhauap.@di"
+//        // Check what happens to the input "\abc(})"
+//        System.out.println(sanitizer.accepts(toList(""), ba));
+//        System.out.println(sanitizer.accepts(toList("829qanwsbdhauap.@di"), ba));
+//        System.out.println(sanitizer.accepts(toList("\\{abc)}"), ba));
+//        System.out.println(sanitizer.accepts(toList("!#$%&'*+-=?^_`{|}~@.[]"), ba));
+//        System.out.println(sanitizer.accepts(toList("™⁄‹›ﬁﬂ‡°·‚—±”’Æ»Ú˘¯§"), ba));
+//        testSanitizer(sanitizer, "829qanwsbdhauap.@di");
+//        testSanitizer(sanitizer, "\\{abc)}");
+//        testSanitizer(sanitizer, "!#$%&'*+-=?^_`{|}~@.[]");
+//        testSanitizer(sanitizer, "™⁄‹›ﬁﬂ‡°·‚—±”’Æ»Ú˘¯§");
+//        testSanitizer(sanitizer, "\\'\"");
+//        testSanitizer(sanitizer, "a'b");
+//        sanitizer.createDotFile("PHPFilterSanitizeMagicQuotes", PATH);
+//
+//
+//        // TODO: Got a not-implemented error when executing this due to the fact that there are more than 1 transitions?
+//        SFA out = sanitizer.getOutputSFA(ba);
+//        out.createDotFile("PHPFilterSanitizeMagicQuotesOutput", PATH);
+//
+//        SFT<CharPred, CharFunc, Character> composed = sanitizer.composeWith((SFT) sanitizer.clone(), ba);
+//        boolean idempotent = composed.decide1equality(sanitizer, ba);
+//        // Should not be idempotent
+//        System.out.println("The sanitizer is idempotent: "+idempotent);
+//
+//
+//        System.out.println("-----");
+//        SFA<CharPred, Character> badOutput = PHPFilterSanitizeMagicQuotes.getBadOutputSFT();
+//        SFA input = sanitizer.inverseImage(badOutput, ba);
+//        input.createDotFile("PHPFilterSanitizeMagicQuotesBadInputs", PATH);
+//        System.out.println("Set of bad inputs is empty: "+input.isEmpty());
     }
 
     private static SFA<CharPred, Character> getBadOutputSFT() {

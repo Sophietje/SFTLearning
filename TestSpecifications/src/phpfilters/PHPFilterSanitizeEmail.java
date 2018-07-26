@@ -105,7 +105,7 @@ public class PHPFilterSanitizeEmail {
         spec.createDotFile("testingSFTParser", PATH);
         SFT read = ReadSpecification.read(PATH+"testingSFTParser.dot");
         read.createDotFile("testingSFTParserRead", PATH);
-        System.out.println(SFT.equals(spec, read));
+        System.out.println("The read and written file are equal: "+SFT.equals(spec, read));
     }
 
     static SFA<CharPred, Character> getBadOutputSFT() {
