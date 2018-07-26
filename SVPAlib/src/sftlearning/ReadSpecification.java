@@ -1,6 +1,10 @@
+/**
+ * This file has been made by Sophie Lathouwers
+ */
 package sftlearning;
 
 import org.sat4j.specs.TimeoutException;
+import theory.BooleanAlgebraSubst;
 import theory.characters.CharConstant;
 import theory.characters.CharFunc;
 import theory.characters.CharOffset;
@@ -18,6 +22,7 @@ public class ReadSpecification {
 
     public static SFT<CharPred, CharFunc, Character> read(String filePath) throws TimeoutException {
         Map<Integer, Boolean> states = new HashMap<>();
+        UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
 
         Scanner sc = null;
         try {
@@ -105,7 +110,7 @@ public class ReadSpecification {
                     System.out.println("Term: "+term);
                 }
 
-                CharPred guards = parseGuard(guard);
+                CharPred guards = parseGuard(guard, ba);
                 List<CharFunc> terms = parseTerms(term);
 
                 transitions.add(new SFTInputMove<>(Integer.valueOf(from), Integer.valueOf(to), guards, terms));
@@ -122,7 +127,6 @@ public class ReadSpecification {
                 finalStates.put(state, new HashSet<>());
             }
         }
-        UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
         return SFT.MkSFT(transitions, initialState, finalStates, ba);
     }
 
@@ -143,14 +147,13 @@ public class ReadSpecification {
             }
             int i = 0;
             while (i < parts.size()) {
-                System.out.println("parts.get(i): "+parts.get(i));
-                System.out.println("i = "+i);
-                System.out.println("parts' size = "+parts.size());
-                int size = parts.size() - 5;
-                System.out.println("parts.size() - 5 = "+size);
-                if (i < (parts.size() - 4) && parts.get(i).equals('x') && parts.get(i+2).equals('+') && parts.get(i+4).equals('0')) {
+                // TODO: This first part of the if should no longer be necessary now that the identity function is outputted as x+0 instead of x + 0
+                if (i < (parts.size() - 4) && parts.get(i) == 'x' && parts.get(i+2) == '+' && parts.get(i+4) == '0') {
                     terms.add(CharOffset.IDENTITY);
                     i += 5; // Skip converted chars
+                } else if (i < (parts.size() - 2) && parts.get(i) == 'x' && parts.get(i+1) == '+' && parts.get(i+2) == '0') {
+                    terms.add(CharOffset.IDENTITY);
+                    i+=3;
                 } else {
                     terms.add(new CharConstant(parts.get(i)));
                     i++; // Skip converted char
@@ -167,14 +170,80 @@ public class ReadSpecification {
      * It works as follows:
      * - takes first character, if it is followed by - and a second character, then the range (first, second) is added
      * - characters may be esaped with a \ thus when encountering a \ then take the following character
+     *      - the following characters should be escaped (each character is separated by a space): - ( ) [ ] \t \b \n \r \f ' " \
+     * - the unicode character < 0x20 and > 0x7f are written down in unicode
      * - if multiple characters follow each other without a - inbetween, then they are all added separately
-     * - the following characters can be escaped: - ( ) [ ] \t \b \n \r \f ' " \
      *
      * @param guard
      * @return
      */
-    private static CharPred parseGuard(String guard) {
-        return new CharPred('a');
+    private static CharPred parseGuard(String guard, BooleanAlgebraSubst<CharPred, CharFunc, Character> ba) throws TimeoutException {
+        CharPred pred = ba.False();
+        char[] chars = guard.toCharArray();
+        int i = 0;
+        Character previous = null;
+        Character next = null;
+        boolean findRange = false;
+        while (i < chars.length) {
+            // Recognize the character
+            if (chars[i] == '\\' && chars[i+1] == 'u') {
+                // Recognize a unicode char
+                String identifier = "" + chars[i+2] + chars[i+3] + chars[i+4] + chars[i+5];
+                // ASSUMES that it 'fits' in a single char!!
+                int id = Integer.valueOf(identifier, 16);
+                next = (char) id;
+                i += 6;
+            } else if (chars[i] == '\\') {
+                // Recognize an escaped character
+                if (chars[i+1] == 't') {
+                    next = '\t';
+                } else if (chars[i+1] == 'b') {
+                    next = '\b';
+                } else if (chars[i+1] == 'n') {
+                    next = '\n';
+                } else if (chars[i+1] == 'r') {
+                    next = '\r';
+                } else if (chars[i+1] == 'f') {
+                    next = '\f';
+                } else if (chars[i+1] == '-' || chars[i+1] =='(' || chars[i+1] == ')' || chars[i+1] == '[' || chars[i+1] == ']' || chars[i+1] == '\'' || chars[i+1] == '"' || chars[i+1] == '\\') {
+                    next = chars[i+1];
+                } else {
+                    System.err.print("This character should not be escaped!");
+                }
+                i += 2;
+            } else if (chars[i] == '-') {
+                // Check whether it is a '-' to indicate a range, Remember the left bound of the range
+                previous = next;
+                findRange = true;
+                i++;
+            } else {
+                // It was an ordinary char
+                next = chars[i];
+                i++;
+            }
+
+            // If the last character is not in a range, add it to the predicate
+            if (!findRange && i == chars.length-1) {
+                pred = ba.MkOr(pred, new CharPred(next, next));
+                next = null;
+            }
+
+            // If we have found the right bound of the range, then add the range
+            if (findRange && previous != null && previous != next) {
+                pred = ba.MkOr(pred, new CharPred(previous, next));
+                // Reset bounds
+                previous = null;
+                next = null;
+                findRange = false;
+            } else if (!findRange && previous != null) {
+                // It was not a range so we need to add the previous character
+                pred = ba.MkOr(pred, new CharPred(previous, previous));
+                previous = null;
+            }
+            previous = next;
+        }
+        System.out.println("Parsed guard into: "+pred.toString());
+        return pred;
     }
 
     public static void main(String[] args) {
