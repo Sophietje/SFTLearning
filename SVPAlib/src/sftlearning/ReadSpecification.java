@@ -4,6 +4,7 @@
 package sftlearning;
 
 import org.sat4j.specs.TimeoutException;
+import specifications.CyberchefSpecifications;
 import theory.BooleanAlgebraSubst;
 import theory.characters.CharConstant;
 import theory.characters.CharFunc;
@@ -36,9 +37,7 @@ public class ReadSpecification {
         List<SFTMove<CharPred, CharFunc, Character>> transitions = new ArrayList<>();
         int initialState = -1;
         while (sc.hasNextLine() && (line = sc.nextLine()) != null) {
-            System.out.println(line);
             if (line.matches("[0-9]+\\[.*\\]")) {
-                System.out.println("Matching with the state declaration");
                 // This line contains a state declaration
                 List<Character> num = new ArrayList<>();
                 int i = 0;
@@ -65,7 +64,6 @@ public class ReadSpecification {
                 }
                 states.put(Integer.valueOf(state), isFinal);
             } else if (line.matches("[0-9]+ -> [0-9]+ \\[.*\\]")) {
-                System.out.println("Matching with the transition rule");
                 // This line contains a transition declaration
                 // Parse from state
                 int i = 0;
@@ -98,19 +96,13 @@ public class ReadSpecification {
                 if (attributes.endsWith("\"]")) {
                     attributes = attributes.substring(0, attributes.length()-"\"]".length());
                 }
-                System.out.println("Current attributes value: "+attributes);
                 // Should now be left with [...]/...
                 String[] label = attributes.split("\\]/");
-                for (String s : label) {
-                    System.out.println("Label has part: "+s);
-                }
 
                 String guard = label[0];
                 String term = null;
-                System.out.println("Guard: "+guard);
                 if (label.length > 1) {
                     term = label[1];
-                    System.out.println("Term: "+term);
                 }
 
                 CharPred guards = parseGuard(guard, ba);
@@ -118,7 +110,6 @@ public class ReadSpecification {
 
                 transitions.add(new SFTInputMove<>(Integer.valueOf(from), Integer.valueOf(to), guards, terms));
             } else if (line.matches("XX[0-9]+ \\[.*\\]XX[0-9]+ -> [0-9]+")) {
-                System.out.println("Matching with the XX rule");
                 // This line reveals the initial state
                 String[] lineParts = line.split(" ");
                 String number = lineParts[lineParts.length-1];
@@ -158,9 +149,20 @@ public class ReadSpecification {
                 } else if (i < (parts.size() - 2) && parts.get(i) == 'x' && parts.get(i+1) == '+' && parts.get(i+2) == '0') {
                     terms.add(CharOffset.IDENTITY);
                     i+=3;
+                } else if (i < (parts.size() - 1) && parts.get(i) == '\\'){
+                    String s = "" + parts.get(i) + parts.get(i+1);
+                    // Make sure to replace \\x by corresponding x
+                    s = s.replace("\\n", "\n");
+                    s = s.replace("\\r", "\r");
+                    s = s.replace("\\f", "\f");
+                    s = s.replace("\\t", "\t");
+                    s = s.replace("\\b", "\b");
+                    s = s.replace("\\\\", "\\");
+                    terms.add(new CharConstant(s.charAt(0)));
+                    i += 3;
                 } else {
                     terms.add(new CharConstant(parts.get(i)));
-                    i++; // Skip converted char
+                    i++;
                 }
                 i++; // Skip space after an output term
             }
@@ -227,7 +229,7 @@ public class ReadSpecification {
             }
 
             // If the last character is not in a range, add it to the predicate
-            if (!findRange && i == chars.length-1) {
+            if (!findRange && i == chars.length) {
                 pred = ba.MkOr(pred, new CharPred(next, next));
                 next = null;
             }
@@ -251,11 +253,19 @@ public class ReadSpecification {
     }
 
     public static void main(String[] args) {
-        String filepath = "/Users/NW/Documents/Djungarian/TestSpecifications/src/phpfilters/PHPFilterSanitizeEmail.dot";
+        String filepath = "/Users/NW/Documents/Djungarian/SVPAlib/src/specifications/";
         try {
-            read(filepath);
+            SFT spec = CyberchefSpecifications.getAtoB();
+            spec.createDotFile("spec", filepath);
+            SFT read = read(filepath+"spec.dot");
+            read.createDotFile("read", filepath);
+            boolean equal = SFT.decide1equality(spec, read, new UnaryCharIntervalSolver());
+            System.out.println("Specified and Read are equal: "+equal);
+            if (!equal) {
+                System.out.println("Witness: "+SFT.witness1disequality(spec, read, new UnaryCharIntervalSolver()));
+            }
         } catch (TimeoutException e) {
-            System.out.println("Timed out.");
+            e.printStackTrace();
         }
     }
 }
