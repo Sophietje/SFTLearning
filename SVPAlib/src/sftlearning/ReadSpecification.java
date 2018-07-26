@@ -36,7 +36,9 @@ public class ReadSpecification {
         List<SFTMove<CharPred, CharFunc, Character>> transitions = new ArrayList<>();
         int initialState = -1;
         while (sc.hasNextLine() && (line = sc.nextLine()) != null) {
+            System.out.println(line);
             if (line.matches("[0-9]+\\[.*\\]")) {
+                System.out.println("Matching with the state declaration");
                 // This line contains a state declaration
                 List<Character> num = new ArrayList<>();
                 int i = 0;
@@ -63,6 +65,7 @@ public class ReadSpecification {
                 }
                 states.put(Integer.valueOf(state), isFinal);
             } else if (line.matches("[0-9]+ -> [0-9]+ \\[.*\\]")) {
+                System.out.println("Matching with the transition rule");
                 // This line contains a transition declaration
                 // Parse from state
                 int i = 0;
@@ -114,7 +117,8 @@ public class ReadSpecification {
                 List<CharFunc> terms = parseTerms(term);
 
                 transitions.add(new SFTInputMove<>(Integer.valueOf(from), Integer.valueOf(to), guards, terms));
-            } else if (line.matches("XX[0-9]+ [.*]XX[0-9]+ -> [0-9]+")) {
+            } else if (line.matches("XX[0-9]+ \\[.*\\]XX[0-9]+ -> [0-9]+")) {
+                System.out.println("Matching with the XX rule");
                 // This line reveals the initial state
                 String[] lineParts = line.split(" ");
                 String number = lineParts[lineParts.length-1];
