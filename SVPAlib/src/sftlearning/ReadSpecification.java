@@ -255,7 +255,7 @@ public class ReadSpecification {
     public static void main(String[] args) {
         String filepath = "/Users/NW/Documents/Djungarian/SVPAlib/src/specifications/";
         try {
-            SFT spec = CyberchefSpecifications.getAtoB();
+            SFT spec = CyberchefSpecifications.getRemoveWhitespaceSpec();
             spec.createDotFile("spec", filepath);
             SFT read = read(filepath+"spec.dot");
             read.createDotFile("read", filepath);

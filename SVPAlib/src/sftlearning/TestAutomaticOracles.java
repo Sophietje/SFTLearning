@@ -4,7 +4,6 @@
 package sftlearning;
 
 import org.sat4j.specs.TimeoutException;
-import specifications.CyberchefSpecifications;
 import theory.characters.CharConstant;
 import theory.characters.CharFunc;
 import theory.characters.CharOffset;
@@ -18,7 +17,6 @@ import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static sftlearning.TestAutomaticEquivalenceOracle.encode;
-import static sftlearning.TestAutomaticEquivalenceOracle.escape;
 import static transducers.sft.SFT.MkSFT;
 import static transducers.sft.SFT.getAccessString;
 
@@ -36,11 +34,15 @@ public class TestAutomaticOracles extends SymbolicOracle<CharPred, CharFunc, Cha
     private static int maxTestsPerState = 100;
     private static int maxTestsPerTransition = 100;
     private static int maxTestsPerPred = 50;
+    private static int MIN_CHAR;
+    private static int MAX_CHAR;
+    static long timeMembership = 0;
+    static long timeEquivalence = 0;
 
 
-    public TestAutomaticOracles() {
-        sc = new Scanner(System.in);
-    }
+//    public TestAutomaticOracles() {
+//        sc = new Scanner(System.in);
+//    }
 
     public TestAutomaticOracles(String command) {
         sc = new Scanner(System.in);
@@ -54,28 +56,67 @@ public class TestAutomaticOracles extends SymbolicOracle<CharPred, CharFunc, Cha
      */
     @Override
     protected List<Character> checkMembershipImpl(List<Character> w) {
+        long start = System.currentTimeMillis();
         String input = "";
         for (Character c : w) {
             input += c;
         }
 
         String output = ExecuteCommand.executeCommandPB(command.split(" "), input);
-        return stringToCharList(output);
+        List<Character> result = stringToCharList(output);
+        long end = System.currentTimeMillis();
+        timeMembership += (end - start);
+        return result;
 //        return encode(w);
     }
 
     @Override
     protected List<Character> checkEquivalenceImpl(SFT<CharPred, CharFunc, Character> compareTo) throws TimeoutException {
+//        System.out.println(compareTo);
+//        char in = '\u0000';
+//        // Ask whether the hypothesis automaton is correct
+//        // This question will be repeated until valid input (either 'n' or 'y') has been given
+//        while (in != 'n' && in != 'y') {
+//            System.out.println("Is that your automaton? (y/n):");
+//            String inLine = sc.nextLine();
+//            if (inLine != null && !inLine.isEmpty() && inLine.length()==1) {
+//                in = inLine.charAt(0);
+//            }
+//        }
+//        if (in == 'y') {
+//            return null;
+//        }
+//        System.out.println("Enter counterexample string a1,a2,a3... :");
+//        String cex = sc.nextLine();
+////        String[] parts = cex.split(",");
+////        List<Character> chars = new ArrayList<>();
+////        for (String s : parts) {
+////            for (Character c : s.toCharArray()) {
+////                chars.add(c);
+////            }
+////        }
+//        return stringToCharList(cex);
+        long start = System.currentTimeMillis();
+        List<Character> result;
         switch (EO) {
-            case 1: return randomEO(compareTo);
-            case 2: return randomTransitionEO(compareTo);
-            case 3: return randomPrefixSelectionEO(compareTo);
-            case 4: return historyBasedEO(compareTo);
-            case 5: return stateCoverageEO(compareTo);
-            case 6: return transitionCoverageEO(compareTo);
-            case 7: return predicateCoverageEO(compareTo);
-            default: return predicateCoverageEO(compareTo);
+            case 1: result = randomEO(compareTo);
+                    break;
+            case 2: result = randomTransitionEO(compareTo);
+                    break;
+            case 3: result = randomPrefixSelectionEO(compareTo);
+                    break;
+            case 4: result = historyBasedEO(compareTo);
+                    break;
+            case 5: result = stateCoverageEO(compareTo);
+                    break;
+            case 6: result = transitionCoverageEO(compareTo);
+                    break;
+            case 7: result = predicateCoverageEO(compareTo);
+                    break;
+            default: result = predicateCoverageEO(compareTo);
         }
+        timeEquivalence += (System.currentTimeMillis() - start);
+        return result;
     }
 
     public List<Character> randomEO(SFT<CharPred, CharFunc, Character> compareTo) throws TimeoutException {
@@ -87,7 +128,7 @@ public class TestAutomaticOracles extends SymbolicOracle<CharPred, CharFunc, Cha
                 input = new ArrayList<>();
                 for (int j = 0; j < maxLength; j++) {
                     // Choose random character to add to input
-                    int random = ThreadLocalRandom.current().nextInt(1, 400);
+                    int random = ThreadLocalRandom.current().nextInt(MIN_CHAR, MAX_CHAR);
                     Character c = CharPred.MIN_CHAR;
                     for (int k = 0; k < random; k++) {
                         c++;
@@ -141,7 +182,7 @@ public class TestAutomaticOracles extends SymbolicOracle<CharPred, CharFunc, Cha
                     // Find random character that satisfies the transition
                     // NOTE: It chooses a random character from a RANGE of the actual complete algebra!
                     while (initialChar || !chosenTrans.hasModel(c, ba)) {
-                        int randomChar = ThreadLocalRandom.current().nextInt(1, 400);
+                        int randomChar = ThreadLocalRandom.current().nextInt(MIN_CHAR, MAX_CHAR);
                         c = CharPred.MIN_CHAR;
                         for (int k = 0; k < randomChar; k++) {
                             c++;
@@ -191,7 +232,7 @@ public class TestAutomaticOracles extends SymbolicOracle<CharPred, CharFunc, Cha
                 int randomLength = ThreadLocalRandom.current().nextInt(minLength, maxLength);
                 for (int j=0; j<randomLength; j++) {
                     // Choose random character to add to input
-                    int random = ThreadLocalRandom.current().nextInt(1, 400);
+                    int random = ThreadLocalRandom.current().nextInt(MIN_CHAR, MAX_CHAR);
                     Character c = CharPred.MIN_CHAR;
                     for (int k = 0; k < random; k++) {
                         c++;
@@ -227,7 +268,7 @@ public class TestAutomaticOracles extends SymbolicOracle<CharPred, CharFunc, Cha
             // Test random inputs for first state
             List<Character> input = new ArrayList<>();
             for (int j=0; j<maxLength; j++) {
-                int random = ThreadLocalRandom.current().nextInt(1, 400);
+                int random = ThreadLocalRandom.current().nextInt(MIN_CHAR, MAX_CHAR);
                 Character c = CharPred.MIN_CHAR;
                 for (int k = 0; k < random; k++) {
                     c++;
@@ -259,7 +300,7 @@ public class TestAutomaticOracles extends SymbolicOracle<CharPred, CharFunc, Cha
                     Character c = CharPred.MIN_CHAR;
                     // Find first character which satisfies the guard of the transition leading to the current state
                     while (c == null || !trans.hasModel(c, ba)) {
-                        int randomChar = ThreadLocalRandom.current().nextInt(1, 400);
+                        int randomChar = ThreadLocalRandom.current().nextInt(MIN_CHAR, MAX_CHAR);
                         c = CharPred.MIN_CHAR;
                         for (int k = 0; k < randomChar; k++) {
                             c++;
@@ -268,7 +309,7 @@ public class TestAutomaticOracles extends SymbolicOracle<CharPred, CharFunc, Cha
                     input.add(c);
                     // Generate the rest of the test case
                     for (int k=1; k<maxLength; k++) {
-                        int random = ThreadLocalRandom.current().nextInt(1, 400);
+                        int random = ThreadLocalRandom.current().nextInt(MIN_CHAR, MAX_CHAR);
                         c = CharPred.MIN_CHAR;
                         for (int l = 0; l < random; l++) {
                             c++;
@@ -306,7 +347,7 @@ public class TestAutomaticOracles extends SymbolicOracle<CharPred, CharFunc, Cha
                     boolean first = true;
                     // Generate character which satisfies the guard of the transition
                     while (first || !trans.hasModel(c, ba)) {
-                        int random = ThreadLocalRandom.current().nextInt(1, 400);
+                        int random = ThreadLocalRandom.current().nextInt(MIN_CHAR, MAX_CHAR);
                         c = CharPred.MIN_CHAR;
                         for (int k = 0; k<random; k++) {
                             c++;
@@ -317,7 +358,7 @@ public class TestAutomaticOracles extends SymbolicOracle<CharPred, CharFunc, Cha
 
                     // Generate the rest of the test case
                     for (int k=0; k<maxLength; k++) {
-                        int random = ThreadLocalRandom.current().nextInt(1, 400);
+                        int random = ThreadLocalRandom.current().nextInt(MIN_CHAR, MAX_CHAR);
                         c = CharPred.MIN_CHAR;
                         for (int l=0; l<random; l++) {
                             c++;
@@ -354,7 +395,7 @@ public class TestAutomaticOracles extends SymbolicOracle<CharPred, CharFunc, Cha
 
                         boolean first = true;
                         while (first || (trans.guard.intervals.get(i).getLeft() > c || trans.guard.intervals.get(i).getRight() < c)) {
-                            int random = ThreadLocalRandom.current().nextInt(1, 400);
+                            int random = ThreadLocalRandom.current().nextInt(MIN_CHAR, MAX_CHAR);
                             c = CharPred.MIN_CHAR;
                             for (int k = 0; k < random; k++) {
                                 c++;
@@ -365,7 +406,7 @@ public class TestAutomaticOracles extends SymbolicOracle<CharPred, CharFunc, Cha
 
                         // Generate the rest of the test case
                         for (int k = 0; k < maxLength; k++) {
-                            int random = ThreadLocalRandom.current().nextInt(1, 400);
+                            int random = ThreadLocalRandom.current().nextInt(MIN_CHAR, MAX_CHAR);
                             c = CharPred.MIN_CHAR;
                             for (int l = 0; l < random; l++) {
                                 c++;
@@ -396,7 +437,7 @@ public class TestAutomaticOracles extends SymbolicOracle<CharPred, CharFunc, Cha
                 List<Character> input = new ArrayList<>();
                 input.addAll(getAccessString(hypothesis, i));
                 for (int k=0; k<maxLength; k++) {
-                    int random = ThreadLocalRandom.current().nextInt(1, 400);
+                    int random = ThreadLocalRandom.current().nextInt(MIN_CHAR, MAX_CHAR);
                     Character c = CharPred.MIN_CHAR;
                     for (int l=0; l<random; l++) {
                         c++;
@@ -412,7 +453,7 @@ public class TestAutomaticOracles extends SymbolicOracle<CharPred, CharFunc, Cha
         return null;
     }
 
-    public static void main(String[] args) {
+    public static void setLearningSettings(Scanner sc) {
         System.out.println("Which Equivalence Oracle to use?");
         System.out.println("1: Random");
         System.out.println("2: Random transition");
@@ -421,7 +462,6 @@ public class TestAutomaticOracles extends SymbolicOracle<CharPred, CharFunc, Cha
         System.out.println("5: State coverage");
         System.out.println("6: Transition coverage");
         System.out.println("7: Predicate coverage");
-        Scanner sc = new Scanner(System.in);
         EO = sc.nextInt();
         if (EO == 1 || EO == 2 || EO == 3) {
             System.out.println("Number of tests to run?");
@@ -439,6 +479,16 @@ public class TestAutomaticOracles extends SymbolicOracle<CharPred, CharFunc, Cha
             System.out.println("Number of tests per predicate?");
             maxTestsPerPred = sc.nextInt();
         }
+        System.out.println("Please specify the lower bound of the alphabet in terms of an integer");
+        MIN_CHAR = sc.nextInt();
+        System.out.println("Please specify the upper bound of the alphabet in terms of an integer");
+        MAX_CHAR = sc.nextInt();
+    }
+
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        setLearningSettings(sc);
+
         System.out.println("Maximum number of minutes to run?");
         maxMinutes = sc.nextInt();
 
@@ -446,16 +496,15 @@ public class TestAutomaticOracles extends SymbolicOracle<CharPred, CharFunc, Cha
         // Read newline from previous line since nextInt doesn't read the new-line character due to which nextLine will always return the empty string the first time
         sc.nextLine();
         String command = sc.nextLine();
-
         SFT spec = null;
 
-        o = new TestAutomaticOracles(command);
-        long startTime = System.currentTimeMillis();
-        BinBSFTLearner ell = new BinBSFTLearner();
-        SFT<CharPred, CharFunc, Character> learned = null;
         try {
+//            SFT spec = ReadSpecification.read("/Users/NW/Documents/Djungarian/Sanitizers/escapeGoatEscape.dot");
+            o = new TestAutomaticOracles(command);
+            long startTime = System.currentTimeMillis();
+            BinBSFTLearner ell = new BinBSFTLearner();
             // Learn model
-            learned = ell.learn(o, ba, maxMinutes);
+            SFT<CharPred, CharFunc, Character> learned = ell.learn(o, ba, maxMinutes);
 
             // Measure how long the learning took
             long endTime = System.currentTimeMillis();
@@ -463,6 +512,8 @@ public class TestAutomaticOracles extends SymbolicOracle<CharPred, CharFunc, Cha
             long sec = totalTime/1000;
             long min = sec/60;
             System.out.println("Total learning time: "+min+" minutes ("+sec+" seconds)");
+            System.out.println("Time spent in membership oracle: "+ (timeMembership)+" milliseconds");
+            System.out.println("Time spent in equivalence oracle: "+(timeEquivalence)+" milliseconds");
 
             // Get specfication from user
             if (learned != null) {
@@ -489,7 +540,7 @@ public class TestAutomaticOracles extends SymbolicOracle<CharPred, CharFunc, Cha
                 System.out.println("Currently established model: ");
                 System.out.println(learned);
             }
-            //learned.createDotFile("testEscapingSlashes", "/Users/NW/Documents/Djungarian/SVPAlib/src/learning/sfa");
+            learned.createDotFile("testEscapingSlashes", "/Users/NW/Documents/Djungarian/SVPAlib/src/learning/sfa");
         } catch (TimeoutException e) {
             e.printStackTrace();
         }

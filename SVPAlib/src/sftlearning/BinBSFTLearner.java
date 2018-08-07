@@ -16,7 +16,6 @@ import transducers.sft.SFTInputMove;
 import transducers.sft.SFTMove;
 
 import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
 
 public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
 
