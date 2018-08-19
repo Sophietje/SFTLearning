@@ -616,6 +616,8 @@ public class SFT<P extends CharPred, F extends TermInterface, S> extends Automat
 			}
 		}
 
+//		System.out.println("Was searching for access string of: "+endState);
+//		System.out.println("In the automaton: "+automaton);
 		return null;
 	}
 

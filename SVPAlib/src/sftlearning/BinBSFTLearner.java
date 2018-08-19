@@ -84,16 +84,20 @@ public class BinBSFTLearner<P extends CharPred, F extends TermInterface, S> {
             }
 
             // Construct hypothesis
+//            System.out.println("Building SFT");
             table.fill(o);
             conjecture = table.buildSFT(o, ba);
 
+//            System.out.println("Checking equivalence");
             // Check equivalence of hypothesis automaton and system under learning (SUL)
             cx = o.checkEquivalence(conjecture);
             if (cx == null) {
+//                System.out.println("Found no counterexample");
                 return conjecture;
             }
 
             // Process the found counterexample
+//            System.out.println("Found CX!");
             table.process(cx, o, ba);
         }
         System.out.println("TIMED OUT AT: "+System.currentTimeMillis());

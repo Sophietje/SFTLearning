@@ -12,9 +12,10 @@ import theory.intervals.UnaryCharIntervalSolver;
 import transducers.sft.SFT;
 import transducers.sft.SFTInputMove;
 import transducers.sft.SFTMove;
-
-import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
+import static java.lang.Integer.max;
+import static java.lang.Integer.min;
+import java.util.*;
 
 import static sftlearning.TestAutomaticEquivalenceOracle.encode;
 import static transducers.sft.SFT.MkSFT;
@@ -34,10 +35,12 @@ public class TestAutomaticOracles extends SymbolicOracle<CharPred, CharFunc, Cha
     private static int maxTestsPerState = 100;
     private static int maxTestsPerTransition = 100;
     private static int maxTestsPerPred = 50;
-    private static int MIN_CHAR;
+    private static int MIN_CHAR = 1;
     private static int MAX_CHAR;
     static long timeMembership = 0;
     static long timeEquivalence = 0;
+    private static int numMembershipQueries = 0;
+    private static int numEquivalenceQueries = 0;
 
 
 //    public TestAutomaticOracles() {
@@ -56,6 +59,8 @@ public class TestAutomaticOracles extends SymbolicOracle<CharPred, CharFunc, Cha
      */
     @Override
     protected List<Character> checkMembershipImpl(List<Character> w) {
+//        System.out.println("Entering MQ");
+        numMembershipQueries++;
         long start = System.currentTimeMillis();
         String input = "";
         for (Character c : w) {
@@ -72,7 +77,9 @@ public class TestAutomaticOracles extends SymbolicOracle<CharPred, CharFunc, Cha
 
     @Override
     protected List<Character> checkEquivalenceImpl(SFT<CharPred, CharFunc, Character> compareTo) throws TimeoutException {
+        numEquivalenceQueries++;
 //        System.out.println(compareTo);
+//        long start = System.currentTimeMillis();
 //        char in = '\u0000';
 //        // Ask whether the hypothesis automaton is correct
 //        // This question will be repeated until valid input (either 'n' or 'y') has been given
@@ -88,14 +95,9 @@ public class TestAutomaticOracles extends SymbolicOracle<CharPred, CharFunc, Cha
 //        }
 //        System.out.println("Enter counterexample string a1,a2,a3... :");
 //        String cex = sc.nextLine();
-////        String[] parts = cex.split(",");
-////        List<Character> chars = new ArrayList<>();
-////        for (String s : parts) {
-////            for (Character c : s.toCharArray()) {
-////                chars.add(c);
-////            }
-////        }
+//        timeEquivalence += (System.currentTimeMillis() - start);
 //        return stringToCharList(cex);
+//        System.out.println("Entering EQ");
         long start = System.currentTimeMillis();
         List<Character> result;
         switch (EO) {
@@ -383,26 +385,58 @@ public class TestAutomaticOracles extends SymbolicOracle<CharPred, CharFunc, Cha
      */
     // Equivalence oracle that achieves predicate coverage in the hypothesis automaton
     public List<Character> predicateCoverageEO(SFT<CharPred, CharFunc, Character> hypothesis) throws TimeoutException {
+//        System.out.println("Entering predicate EO");
         for (int state=0; state<hypothesis.stateCount(); state++) {
             Collection<SFTInputMove<CharPred, CharFunc, Character>> transitions = hypothesis.getInputMovesFrom(state);
             for (SFTInputMove<CharPred, CharFunc, Character> trans : transitions) {
+                intervalLoop:
                 for (int i=0; i<trans.guard.intervals.size(); i++) {
                     for (int j=0; j<maxTestsPerPred; j++) {
                         List<Character> input = new ArrayList<>();
-                        input.addAll(getAccessString(hypothesis, state));
-                        Character c = CharPred.MIN_CHAR;
+//                        System.out.println("Getting access string");
+                        List<Character> accString = getAccessString(hypothesis, state);
+                        if (accString == null) {
+                            // There are no transitions leading to this state so we skip this as it is unreachable
+                            break intervalLoop;
+                        }
+                        input.addAll(accString);
+                        Character c = 0;
                         // Generate character which satisfies the guard of the transition
 
+//                        System.out.println("Generating first character");
                         boolean first = true;
-                        while (first || (trans.guard.intervals.get(i).getLeft() > c || trans.guard.intervals.get(i).getRight() < c)) {
-                            int random = ThreadLocalRandom.current().nextInt(MIN_CHAR, MAX_CHAR);
-                            c = CharPred.MIN_CHAR;
-                            for (int k = 0; k < random; k++) {
-                                c++;
+                        while (first || (c == 0 || trans.guard.intervals.get(i).getLeft() > c || trans.guard.intervals.get(i).getRight() < c)) {
+                            c = getRandomCharacter(trans.guard.intervals.get(i).right, trans.guard.intervals.get(i).left, MIN_CHAR, MAX_CHAR);
+//                            char minl = trans.guard.intervals.get(i).getLeft().charValue();
+//                            char[] mins = new char[1];
+//                            mins[0] = minl;
+//                            int min = Character.codePointAt(mins, 0);
+//                            char maxr = trans.guard.intervals.get(i).getRight().charValue();
+//                            char[] maxs = new char[1];
+//                            maxs[0] = maxr;
+//                            int max = Character.codePointAt(mins, 0);
+//
+//                            first = false;
+//                            System.out.println(minl);
+//                            System.out.println(maxr);
+//
+//                            System.out.println("["+trans.guard.intervals.get(i).left+", "+trans.guard.intervals.get(i).right+"]");
+//
+//                            System.out.println("MIN_CHAR="+MIN_CHAR);
+//                            System.out.println("MAX_CHAR="+MAX_CHAR);
+//                            System.out.println("MIN_Char: "+min);
+//                            System.out.println("MAX_Char: "+max);
+//                            char left = min < MIN_CHAR ? Character.toChars(MIN_CHAR)[0] : minl;
+//                            char right = max > MAX_CHAR ? Character.toChars(MAX_CHAR)[0] : maxr;
+                            if (c == 0) {
+                                break intervalLoop;
                             }
+//                            c = (char) (left + Math.random()*(right-left+1));
+//                            System.out.println("Generated character "+c);
                             first = false;
                         }
                         input.add(c);
+//                        System.out.println("Generating rest of the test case");
 
                         // Generate the rest of the test case
                         for (int k = 0; k < maxLength; k++) {
@@ -414,9 +448,12 @@ public class TestAutomaticOracles extends SymbolicOracle<CharPred, CharFunc, Cha
                             input.add(c);
                         }
 
+//                        System.out.println("Generated output "+j+": "+input);
                         if (!hypothesis.outputOn(input, ba).equals(o.checkMembership(input))) {
+//                            System.out.println("Output on hypothesis != actual");
                             return input;
                         }
+//                        System.out.println("Output on hypothesis == actual");
                     }
                 }
             }
@@ -514,6 +551,8 @@ public class TestAutomaticOracles extends SymbolicOracle<CharPred, CharFunc, Cha
             System.out.println("Total learning time: "+min+" minutes ("+sec+" seconds)");
             System.out.println("Time spent in membership oracle: "+ (timeMembership)+" milliseconds");
             System.out.println("Time spent in equivalence oracle: "+(timeEquivalence)+" milliseconds");
+            System.out.println("Number of membership queries asked: "+numMembershipQueries);
+            System.out.println("Number of equivalence queries asked: "+numEquivalenceQueries);
 
             // Get specfication from user
             if (learned != null) {
@@ -641,6 +680,51 @@ public class TestAutomaticOracles extends SymbolicOracle<CharPred, CharFunc, Cha
         SFT<CharPred, CharFunc, Character> spec = MkSFT(transitions, initial, finalStatesAndTails, new UnaryCharIntervalSolver());
 
         return spec;
+    }
+
+    /**
+     * Gets random character that is both in interval [lowerInterval, upperInterval) and [otherLowerInterval, otherUpperInterval)
+     * @param lowerInterval Lower interval bound
+     * @param upperInterval Upper interval bound
+     * @param otherLowerInterval Lower interval bound
+     * @param otherUpperInterval Upper interval bound
+     * @return Character in both intervals. \u0000 if value doesn't exist
+     */
+    public char getRandomCharacter(int upperInterval, int lowerInterval, int otherLowerInterval, int otherUpperInterval) {
+//        System.out.println("In getRandomCharacter(int, int, int, int)");
+        int lower = max(lowerInterval, otherLowerInterval);
+        int upper = min(upperInterval, otherUpperInterval);
+//        System.out.println("Lower: "+lower);
+//        System.out.println("Upper: "+upper);
+
+        if (upper < lower) {
+            return 0;
+        }
+
+        int randomValue = ThreadLocalRandom.current().nextInt(lower, upper + 1);
+//        System.out.println("Random value: "+randomValue);
+//        int randomValue = (int) (lower + Math.random()*(upper-lower+1));
+
+        try {
+            return Character.toChars(randomValue)[0];
+        } catch (IndexOutOfBoundsException _) {
+            return 0;
+        }
+    }
+
+    public char getRandomCharacter(char maxChar, char minChar, int lowerInterval, int upperInterval) {
+        char[] characters = new char[] {maxChar, minChar};
+
+        int maxCharInt = Character.codePointAt(characters, 0);
+        int minCharInt = Character.codePointAt(characters, 1);
+//        System.out.println("max char "+maxCharInt);
+//        System.out.println("min char "+minCharInt);
+//        System.out.println("max char "+maxChar);
+//        System.out.println("min char "+minChar);
+//        System.out.println("lowerInterval "+lowerInterval);
+//        System.out.println("upperInterval "+upperInterval);
+
+        return getRandomCharacter(maxCharInt, minCharInt, lowerInterval, upperInterval);
     }
 
 }
