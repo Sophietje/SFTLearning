@@ -44,7 +44,7 @@ After choosing a specific oracle, the user will be asked to provide some paramet
 
 ## Specifications
 This research aimed to be able to reason about the correctness of sanitizers by comparing a derived model to a specification. This specification needs to be written by the user in the form of an SFA or SFT.
-It should be provided in a DOT file with a specific structure.
+It should be provided in a [DOT](https://en.wikipedia.org/wiki/DOT_(graph_description_language)) file with a specific structure.
 The program will then ask which type of specification the user wants to check.
 The following types of specifications can be checked:
 * **Equality**
