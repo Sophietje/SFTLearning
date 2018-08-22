@@ -6,6 +6,7 @@ This repository contains implementations for:
 * SFT (Symbolic Finite Transducer) learning algorithm
 
 These algorithms can ask a sanitizer two types of questions: a membership query or an equivalence query. Based on the results, it will then derive a model (SFA/SFT).
+This research has been done for my Master's Thesis (Computer Science, University of Twente) which is titled "Reasoning about the Correctness of Sanitizers".
 
 
 ## Membership Oracle
