@@ -109,7 +109,7 @@ public class ReadSpecification {
                 List<CharFunc> terms = parseTerms(term);
 
                 transitions.add(new SFTInputMove<>(Integer.valueOf(from), Integer.valueOf(to), guards, terms));
-            } else if (line.matches("XX[0-9]+ \\[.*\\]XX[0-9]+ -> [0-9]+")) {
+            } else if (line.matches("XX[0-9]+ \\[.*\\]XX[0-9]+ -> [0-9]+") || line.matches("XX[0-9]+ -> [0-9]+")) {
                 // This line reveals the initial state
                 String[] lineParts = line.split(" ");
                 String number = lineParts[lineParts.length-1];
@@ -133,7 +133,7 @@ public class ReadSpecification {
      * @return
      */
     private static List<CharFunc> parseTerms(String term) {
-        // The string that is provided should look like "x + 0 a b c x x+0"
+        // The string that is provided should look like "x+0 a b c x x+0"
         List<CharFunc> terms = new ArrayList<>();
         List<Character> parts = new ArrayList<>();
         if (term != null && !term.isEmpty()) {
@@ -143,12 +143,9 @@ public class ReadSpecification {
             int i = 0;
             while (i < parts.size()) {
                 // TODO: This first part of the if should no longer be necessary now that the identity function is outputted as x+0 instead of x + 0
-                if (i < (parts.size() - 4) && parts.get(i) == 'x' && parts.get(i+2) == '+' && parts.get(i+4) == '0') {
+                if (i < (parts.size() - 2) && parts.get(i) == 'x' && parts.get(i+1) == '+' && parts.get(i+2) == '0') {
                     terms.add(CharOffset.IDENTITY);
-                    i += 5; // Skip converted chars
-                } else if (i < (parts.size() - 2) && parts.get(i) == 'x' && parts.get(i+1) == '+' && parts.get(i+2) == '0') {
-                    terms.add(CharOffset.IDENTITY);
-                    i+=3;
+                    i += 3;
                 } else if (i < (parts.size() - 1) && parts.get(i) == '\\'){
                     String s = "" + parts.get(i) + parts.get(i+1);
                     // Make sure to replace \\x by corresponding x
@@ -159,7 +156,7 @@ public class ReadSpecification {
                     s = s.replace("\\b", "\b");
                     s = s.replace("\\\\", "\\");
                     terms.add(new CharConstant(s.charAt(0)));
-                    i += 3;
+                    i += 2;
                 } else {
                     terms.add(new CharConstant(parts.get(i)));
                     i++;
@@ -167,7 +164,7 @@ public class ReadSpecification {
                 i++; // Skip space after an output term
             }
         }
-        System.out.println("Parsed terms into: "+terms);
+//        System.out.println("Parsed terms into: "+terms);
         return terms;
     }
 
@@ -248,17 +245,33 @@ public class ReadSpecification {
             }
             previous = next;
         }
-        System.out.println("Parsed guard into: "+pred.toString());
+//        System.out.println("Parsed guard into: "+pred.toString());
         return pred;
     }
 
     public static void main(String[] args) {
-        String filepath = "/Users/NW/Documents/Djungarian/SVPAlib/src/specifications/";
+        String filepath = "/Users/NW/Documents/Djungarian/SVPAlib/src/";
+//        String[] learnedModels = {"encodeHe.dot","escapeCgiPython.dot","escapeEscapeGoat.dot","escapeEscapeStringRegexp.dot", "filterSanitizeEmailPHP.dot", "htmlspecialcharsPHP.dot", "toLowercaseCyberChef.dot"};
+//        String[] specs = {"encodeHe.dot", "escapeCGI.dot", "escapeEscapeGoat.dot", "escape-string-regexp.dot", "filter_sanitize_email.dot", "htmlspecialchars.dot", "toLowerCase.dot"};
+
         try {
             SFT spec = CyberchefSpecifications.getRemoveWhitespaceSpec();
             spec.createDotFile("spec", filepath);
             SFT read = read(filepath+"spec.dot");
             read.createDotFile("read", filepath);
+
+//            Idempotency?
+
+//            Should it behave the same as another sanitizer?
+//            If so, is their behaviour the same? (Are they equivalent?)
+
+
+//            Do they commute with the other sanitizers?
+
+//            Are there any discrepancies compared to the user's specification of the sanitizer?
+
+
+
             boolean equal = SFT.decide1equality(spec, read, new UnaryCharIntervalSolver());
             System.out.println("Specified and Read are equal: "+equal);
             if (!equal) {
