@@ -6,7 +6,7 @@ package sftlearning;
 
 import automata.sfa.SFA;
 import org.sat4j.specs.TimeoutException;
-import specifications.CyberchefSpecifications;
+import sftlearning.ReadSpecification;
 import theory.BooleanAlgebraSubst;
 import theory.characters.CharConstant;
 import theory.characters.CharFunc;
@@ -353,13 +353,70 @@ public class SpecificationChecking {
     }
 
     public static void main(String[] args) {
-        try {
-            SFT sft = CyberchefSpecifications.getLowercaseSpec();
-            System.out.println(sft);
-            System.out.println(getBadInput(sft, "dmphjkolf"));
+//        try {
+//            SFT sft = CyberchefSpecifications.getLowercaseSpec();
+//            System.out.println(sft);
+//            System.out.println(getBadInput(sft, "dmphjkolf"));
+//
+//        } catch (TimeoutException e) {
+//            e.printStackTrace();
+//        }
 
+        String workingDir = "/Users/NW/Documents/Djungarian/SVPAlib/src/learning/";
+//        String[] learnedModels = {"htmlspecialcharsPHP.dot"};
+        String[] learnedModels = {"encodeHe.dot","escapeCgiPython.dot","escapeEscapeGoat.dot","escapeEscapeStringRegexp.dot", "filterSanitizeEmailPHP.dot", "htmlspecialcharsPHP.dot"};
+        String[] specs = {"encodeHe.dot", "escapeCGI.dot", "escapeEscapeGoat.dot", "escape-string-regexp.dot", "filter_sanitize_email.dot", "htmlspecialchars.dot"};
+
+        try {
+            SFT spec = ReadSpecification.read(workingDir + "specifications/toLowerCase.dot");
+            System.out.println("toLowercase is idempotent? "+SpecificationChecking.checkIdempotency(spec));
+            for (String model : learnedModels) {
+                SFT learned = ReadSpecification.read(workingDir+model);
+                System.out.println("Does "+model+" commute with toLowercase? "+SpecificationChecking.checkCommutativity(spec, learned));
+            }
         } catch (TimeoutException e) {
-            e.printStackTrace();
+            System.out.println("Timed out...");
         }
+
+
+//        for (int i = 0; i < learnedModels.length; i++) {
+//            try {
+//                SFT learned = ReadSpecification.read(workingDir + learnedModels[i]);
+//                SFT spec = ReadSpecification.read(workingDir + "specifications/" + specs[i]);
+//                boolean equal =  SpecificationChecking.areEqual(learned, spec);
+//                System.out.println(" Specification of " + learnedModels[i] + " is correct?: " +equal);
+//                if (!equal) {
+//                    List<Character> witness = learned.witness1disequality(spec, new UnaryCharIntervalSolver());
+//                    System.out.println("Witness: "+witness);
+//                    String witString = "";
+//
+//                    System.out.println("Learned model outputs: "+learned.outputOn(witness, new UnaryCharIntervalSolver()));
+//                    System.out.println("Specified model outputs: "+spec.outputOn(witness, new UnaryCharIntervalSolver()));
+//                    System.out.println(learned);
+//                    System.out.println(spec);
+//                }
+//            } catch (TimeoutException e1) {
+//                e1.printStackTrace();
+//            }
+//        }
+//        //
+//        try {
+//            for (String s : learnedModels) {
+//                String filepath = workingDir + s;
+////                System.out.println("Specified file: "+filepath);
+//                SFT learned = ReadSpecification.read(workingDir + s);
+////                System.out.println(learned);
+//                System.out.println("Is "+s+" idempotent?: "+SpecificationChecking.checkIdempotency(learned));
+//
+//                for (String t : specs) {
+//                    String filepath2 = workingDir + "specifications/" +t;
+//                    SFT other = ReadSpecification.read(filepath2);
+//
+//                    System.out.println("Do "+filepath+" and "+filepath2+" commute? "+SpecificationChecking.checkCommutativity(learned, other));
+//                }
+//            }
+//        } catch (TimeoutException e) {
+//            System.out.println("Timed out...");
+//        }
     }
 }
