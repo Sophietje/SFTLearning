@@ -229,6 +229,9 @@ public class TestAutomaticOracles extends SymbolicOracle<CharPred, CharFunc, Cha
                 // Find access sequence of this state
                 List<Character> accString = SFT.getAccessString(hypothesis, randomState);
                 // Append the access string to the input as prefix
+                if (accString == null) {
+                    continue;
+                }
                 input.addAll(accString);
 
                 int randomLength = ThreadLocalRandom.current().nextInt(minLength, maxLength);
@@ -299,6 +302,9 @@ public class TestAutomaticOracles extends SymbolicOracle<CharPred, CharFunc, Cha
                     // We start in state i
                     List<Character> input = SFT.getAccessString(hypothesis, i);
                     // Generate an input with a length of y (=maxLength)
+                    if (input == null) {
+                        break;
+                    }
                     Character c = CharPred.MIN_CHAR;
                     // Find first character which satisfies the guard of the transition leading to the current state
                     while (c == null || !trans.hasModel(c, ba)) {
@@ -385,7 +391,6 @@ public class TestAutomaticOracles extends SymbolicOracle<CharPred, CharFunc, Cha
      */
     // Equivalence oracle that achieves predicate coverage in the hypothesis automaton
     public List<Character> predicateCoverageEO(SFT<CharPred, CharFunc, Character> hypothesis) throws TimeoutException {
-//        System.out.println("Entering predicate EO");
         for (int state=0; state<hypothesis.stateCount(); state++) {
             Collection<SFTInputMove<CharPred, CharFunc, Character>> transitions = hypothesis.getInputMovesFrom(state);
             for (SFTInputMove<CharPred, CharFunc, Character> trans : transitions) {
@@ -393,7 +398,6 @@ public class TestAutomaticOracles extends SymbolicOracle<CharPred, CharFunc, Cha
                 for (int i=0; i<trans.guard.intervals.size(); i++) {
                     for (int j=0; j<maxTestsPerPred; j++) {
                         List<Character> input = new ArrayList<>();
-//                        System.out.println("Getting access string");
                         List<Character> accString = getAccessString(hypothesis, state);
                         if (accString == null) {
                             // There are no transitions leading to this state so we skip this as it is unreachable
@@ -402,41 +406,15 @@ public class TestAutomaticOracles extends SymbolicOracle<CharPred, CharFunc, Cha
                         input.addAll(accString);
                         Character c = 0;
                         // Generate character which satisfies the guard of the transition
-
-//                        System.out.println("Generating first character");
                         boolean first = true;
                         while (first || (c == 0 || trans.guard.intervals.get(i).getLeft() > c || trans.guard.intervals.get(i).getRight() < c)) {
                             c = getRandomCharacter(trans.guard.intervals.get(i).right, trans.guard.intervals.get(i).left, MIN_CHAR, MAX_CHAR);
-//                            char minl = trans.guard.intervals.get(i).getLeft().charValue();
-//                            char[] mins = new char[1];
-//                            mins[0] = minl;
-//                            int min = Character.codePointAt(mins, 0);
-//                            char maxr = trans.guard.intervals.get(i).getRight().charValue();
-//                            char[] maxs = new char[1];
-//                            maxs[0] = maxr;
-//                            int max = Character.codePointAt(mins, 0);
-//
-//                            first = false;
-//                            System.out.println(minl);
-//                            System.out.println(maxr);
-//
-//                            System.out.println("["+trans.guard.intervals.get(i).left+", "+trans.guard.intervals.get(i).right+"]");
-//
-//                            System.out.println("MIN_CHAR="+MIN_CHAR);
-//                            System.out.println("MAX_CHAR="+MAX_CHAR);
-//                            System.out.println("MIN_Char: "+min);
-//                            System.out.println("MAX_Char: "+max);
-//                            char left = min < MIN_CHAR ? Character.toChars(MIN_CHAR)[0] : minl;
-//                            char right = max > MAX_CHAR ? Character.toChars(MAX_CHAR)[0] : maxr;
                             if (c == 0) {
                                 break intervalLoop;
                             }
-//                            c = (char) (left + Math.random()*(right-left+1));
-//                            System.out.println("Generated character "+c);
                             first = false;
                         }
                         input.add(c);
-//                        System.out.println("Generating rest of the test case");
 
                         // Generate the rest of the test case
                         for (int k = 0; k < maxLength; k++) {
@@ -448,12 +426,9 @@ public class TestAutomaticOracles extends SymbolicOracle<CharPred, CharFunc, Cha
                             input.add(c);
                         }
 
-//                        System.out.println("Generated output "+j+": "+input);
                         if (!hypothesis.outputOn(input, ba).equals(o.checkMembership(input))) {
-//                            System.out.println("Output on hypothesis != actual");
                             return input;
                         }
-//                        System.out.println("Output on hypothesis == actual");
                     }
                 }
             }
@@ -472,7 +447,12 @@ public class TestAutomaticOracles extends SymbolicOracle<CharPred, CharFunc, Cha
         for (int i=0; i<hypothesis.stateCount(); i++) {
             for (int j=0; j<maxTestsPerState; j++) {
                 List<Character> input = new ArrayList<>();
-                input.addAll(getAccessString(hypothesis, i));
+                List<Character> accString = getAccessString(hypothesis, i);
+                if (accString == null) {
+                    break;
+                }
+                input.addAll(accString);
+
                 for (int k=0; k<maxLength; k++) {
                     int random = ThreadLocalRandom.current().nextInt(MIN_CHAR, MAX_CHAR);
                     Character c = CharPred.MIN_CHAR;
@@ -579,7 +559,7 @@ public class TestAutomaticOracles extends SymbolicOracle<CharPred, CharFunc, Cha
                 System.out.println("Currently established model: ");
                 System.out.println(learned);
             }
-            learned.createDotFile("testEscapingSlashes", "/Users/NW/Documents/Djungarian/SVPAlib/src/learning/sfa");
+            learned.createDotFile("learned", "/Users/NW/Documents/Djungarian/SVPAlib/src/sftlearning/learned/");
         } catch (TimeoutException e) {
             e.printStackTrace();
         }
