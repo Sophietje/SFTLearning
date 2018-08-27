@@ -1,4 +1,8 @@
 /**
+ * NOTICE: This file has been modified by Sophie Lathouwers!
+ */
+
+/**
  * SVPAlib
  * automata.sfa
  * Apr 21, 2015

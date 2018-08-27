@@ -1,4 +1,8 @@
 /**
+ * NOTICE: This file has been modified by Sophie Lathouwers!
+ */
+
+/**
  * BooleanAlgebras
  * theory
  * Apr 21, 2015

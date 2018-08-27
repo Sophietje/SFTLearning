@@ -1,3 +1,7 @@
+/**
+ * NOTICE: This file has been modified by Sophie Lathouwers!
+ */
+
 package utilities;
 
 import java.util.HashMap;

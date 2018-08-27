@@ -1,4 +1,8 @@
 /**
+ * NOTICE: This file has been modified by Sophie Lathouwers!
+ */
+
+/**
  * SVPAlib
  * transducers.sft
  * Mar 20, 2018
