@@ -7,6 +7,24 @@
     <groupId>cs.wisc.edu</groupId>
     <artifactId>symbolicautomata</artifactId>
     <version>1.0</version>
+    <dependencies>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>18.0</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>commons-codec</groupId>
+            <artifactId>commons-codec</artifactId>
+            <version>1.3</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-codec</groupId>
+            <artifactId>commons-codec</artifactId>
+            <version>1.3</version>
+        </dependency>
+    </dependencies>
     <packaging>pom</packaging>
     <name>symbolicautomata</name>
     
@@ -19,7 +37,8 @@
         <module>automatark</module>
         <module>SVPAlib</module>
         <module>TestSVPA</module>
-        <module>SVPABenchmark</module>
+        <module>Sanitizers</module>
+        <module>T</module>
     </modules>
     
     <repositories>
