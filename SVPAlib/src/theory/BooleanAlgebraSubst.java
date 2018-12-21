@@ -166,6 +166,7 @@ public abstract class BooleanAlgebraSubst<P extends CharPred,F extends TermInter
 
 				// Try splitting the predicate in case it generates a different output for two atoms in the predicate
 				List<CharPred> preds = splitPredicate(ithPred, ot, fromChars);
+//				System.out.println("New comment: the predicate has been split succesfully");
 
 				for (CharPred p : preds) {
 					Integer to = predOutputGroups.get(pred).getValue();
@@ -206,6 +207,7 @@ public abstract class BooleanAlgebraSubst<P extends CharPred,F extends TermInter
 			}
 		}
 
+//		System.out.println("Succesfully generated predicates and terms");
 		return out;
 	}
 
@@ -248,7 +250,7 @@ public abstract class BooleanAlgebraSubst<P extends CharPred,F extends TermInter
 
 	/**
 	 * Given a predicate, it checks whether this predicate should be split into multiple predicates
-	 * It returns a list of predicates which are the predicates for which we need to generate terms
+	 * It returns a list of predicates which are the predicates for which we need to generate terms (output functions)
 	 * @param ithPred predicate which might be split
 	 * @param ot observation table
 	 * @param from list of characters representing the state from which the transition with predicate ithPred leaves
@@ -296,7 +298,9 @@ public abstract class BooleanAlgebraSubst<P extends CharPred,F extends TermInter
 						boolean sameFunctions = true;
 						int i=0;
 						for (Character c : output) {
-							if ((c.equals(extension) && !functions.get(i).equals(CharOffset.IDENTITY))
+							// ADDED "i >= functions.size()" to prevent indexoutofbounds. If there are more functions which are not in functions, then there are more functions then identified thus they are not the same
+//							if (i >= functions.size() || (c.equals(extension) && !functions.get(i).equals(CharOffset.IDENTITY))
+							if (i>= functions.size() || (c.equals(extension) && !functions.get(i).equals(CharOffset.IDENTITY))
 									|| (!c.equals(extension) && !functions.get(i).equals(new CharConstant(c)))) {
 //								System.out.println("Not the same functions!");
 								sameFunctions = false;

@@ -23,6 +23,9 @@ import automata.sfa.SFA;
 import automata.sfa.SFAMove;
 import automata.sfa.SFAEpsilon;
 import automata.sfa.SFAInputMove;
+import sftlearning.TestAutomaticOracles;
+import sftlearning.TestAutomaticOraclesFIXED;
+import sftlearning.TestMembershipOracleStream;
 import specifications.CyberchefSpecifications;
 import theory.BooleanAlgebraSubst;
 import theory.characters.*;
@@ -564,6 +567,7 @@ public class SFT<P extends CharPred, F extends TermInterface, S> extends Automat
 	// With help of: https://github.com/dineshappavoo/bfs-shortestpath/blob/master/src/com/bfs/shortestpath/graph/BFSShortestPath.java
 	public static List<Character> getAccessString(SFT<CharPred, CharFunc, Character> automaton, int endState) throws TimeoutException {
 		// End state == initial state thus the empty list suffices
+//		System.out.println(automaton.toString());
 		if (automaton.isInitialState(endState)) {
 			return new ArrayList<>();
 		}
@@ -625,6 +629,7 @@ public class SFT<P extends CharPred, F extends TermInterface, S> extends Automat
 	// NOTE: ASSUMES Characters satisfy predicates!!
 	private static List<Character> toInput(SFT<CharPred, CharFunc, Character> automaton, List<Integer> path) throws TimeoutException {
 		// First state will be the first element in the list
+//		System.out.println("Constructing path from first state to last state");
 		List<Character> input = new ArrayList<>();
 		int i=0;
 		while (i < path.size()-1) {
@@ -636,14 +641,23 @@ public class SFT<P extends CharPred, F extends TermInterface, S> extends Automat
 					boolean initialChar = true;
 					// Find random character that satisfies the transition
 					// NOTE: It chooses a random character from a RANGE of the actual complete algebra!
+
 					while (initialChar || !t.guard.isSatisfiedBy(c)) {
-						int randomChar = ThreadLocalRandom.current().nextInt(1, 400);
-						c = CharPred.MIN_CHAR;
-						for (int k = 0; k < randomChar; k++) {
-							c++;
+                        int j = ThreadLocalRandom.current().nextInt(0, t.guard.intervals.size());
+//                        System.out.println("There are "+t.guard.intervals.size()+"intervals");
+//                        System.out.println("Chosen interval "+j);
+//                        System.out.println("left ="+t.guard.intervals.get(j).left+"=");
+//                        System.out.println("right ="+t.guard.intervals.get(j).right+"=");
+                        // TODO: CHANGE THIS LATER TO OTHER CLASS
+						c = TestMembershipOracleStream.getRandomCharacter(t.guard.intervals.get(j).right, t.guard.intervals.get(j).left);
+//						System.out.println("Found character "+c);
+						if (c == 0) {
+							System.out.println("toInput: could not find character to satisfy the guard "+t.guard);
+							continue;
 						}
 						initialChar = false;
 					}
+//					System.out.println("Found char that satisfies the guard");
 					input.add(c);
 				}
 			}

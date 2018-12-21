@@ -4,31 +4,37 @@
 package sftlearning;
 
 import org.sat4j.specs.TimeoutException;
-import theory.characters.CharConstant;
 import theory.characters.CharFunc;
-import theory.characters.CharOffset;
 import theory.characters.CharPred;
 import theory.intervals.UnaryCharIntervalSolver;
 import transducers.sft.SFT;
 import transducers.sft.SFTInputMove;
 import transducers.sft.SFTMove;
 
-import java.util.*;
+import java.io.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Scanner;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Matcher;
 
-import static transducers.sft.SFT.MkSFT;
+import static java.lang.Integer.max;
+import static java.lang.Integer.min;
 import static transducers.sft.SFT.getAccessString;
 
-/**
- * TODO: UPDATE IMPLEMENTATIONS OF EQUIVALENCE ORACLE TACTICS!!!
- * Class that is used to test different equivalence oracle implementations
- */
-public class TestAutomaticEquivalenceOracle extends SymbolicOracle<CharPred, CharFunc, Character> {
+public class TestMembershipOracleStream extends SymbolicOracle<CharPred, CharFunc, Character> {
 
-    private static UnaryCharIntervalSolver ba;
-    private static SymbolicOracle o;
     private Scanner sc;
+    private static BufferedWriter bw;
+    private ProcessBuilder pb;
+    private static Process p;
+    private static BufferedReader br;
+    private static String command;
+
+    private static final UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
+    private static SymbolicOracle o;
+    private static int EO = 0;
     private static int maxMinutes = 180;
     private final int minLength = 5;
     private final int maxLength = 15;
@@ -36,54 +42,60 @@ public class TestAutomaticEquivalenceOracle extends SymbolicOracle<CharPred, Cha
     private static int maxTestsPerState = 100;
     private static int maxTestsPerTransition = 100;
     private static int maxTestsPerPred = 50;
-    private static int EO = 0;
+    private static int MIN_CHAR = 1;
+    private static int MAX_CHAR;
+    static long timeMembership = 0;
+    static long timeEquivalence = 0;
+    private static int numMembershipQueries = 0;
+    private static int numEquivalenceQueries = 0;
 
-    public TestAutomaticEquivalenceOracle() {
+//    private static final String command = "node Sanitizers/escape/escapeGoatEscapeStreams.js";
+
+    public TestMembershipOracleStream(String command) {
         sc = new Scanner(System.in);
-    }
-
-
-
-    /**
-     * Implementation for the equivalence oracle
-     * Within this class you can find different methods to use as an equivalence oracle, simply call one of those or implement your own
-     *
-     * @param compareTo hypothesis automaton
-     * @return counterexample (input upon which the hypothesis automaton and system under learning act differently)
-     * @throws TimeoutException
-     */
-    @Override
-    protected List<Character> checkEquivalenceImpl(SFT<CharPred, CharFunc, Character> compareTo) throws TimeoutException {
-        switch (EO) {
-            case 1: return randomEO(compareTo);
-            case 2: return randomTransitionEO(compareTo);
-            case 3: return randomPrefixSelectionEO(compareTo);
-            case 4: return historyBasedEO(compareTo);
-            case 5: return stateCoverageEO(compareTo);
-            case 6: return transitionCoverageEO(compareTo);
-            case 7: return predicateCoverageEO(compareTo);
-            default: return randomEO(compareTo);
+        this.command = command;
+        String[] cmd = this.command.split(" ");
+        pb = new ProcessBuilder(cmd);
+        pb.redirectErrorStream(true);
+        try {
+            p = pb.start();
+            br = new BufferedReader(new InputStreamReader(p.getInputStream()));
+            bw = new BufferedWriter(new OutputStreamWriter(p.getOutputStream()));
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
-    /**
-     * Implementation of the membership oracle
-     *
-     * @param w input
-     * @return output that is produced by the automaton upon input w
-     */
+
     @Override
-    protected List<Character> checkMembershipImpl(List<Character> w) {
-        return escape(w);
+    protected List<Character> checkEquivalenceImpl(SFT<CharPred, CharFunc, Character> compareTo) throws TimeoutException {
+        numEquivalenceQueries++;
+
+//        System.out.println("Entering equivalence oracle implementation");
+        long start = System.currentTimeMillis();
+        List<Character> result;
+        switch (EO) {
+            case 1: result = randomEO(compareTo);
+                break;
+            case 2: result = randomTransitionEO(compareTo);
+                break;
+            case 3: result = randomPrefixSelectionEO(compareTo);
+                break;
+            case 4: result = historyBasedEO(compareTo);
+                break;
+            case 5: result = stateCoverageEO(compareTo);
+                break;
+            case 6: result = transitionCoverageEO(compareTo);
+                break;
+            case 7: result = predicateCoverageEO(compareTo);
+                break;
+            default: result = predicateCoverageEO(compareTo);
+        }
+        timeEquivalence += (System.currentTimeMillis() - start);
+//        System.out.println("Leaving equivalence oracle implementation");
+        return result;
     }
 
-    /**
-     * Equivalence Oracle that does random generated tests
-     *
-     * @param compareTo hypothesis automaton
-     * @return counterexample
-     * @throws TimeoutException
-     */
     public List<Character> randomEO(SFT<CharPred, CharFunc, Character> compareTo) throws TimeoutException {
         List<List<Character>> tested = new ArrayList<>();
         for (int i=0; i<numTests; i++) {
@@ -93,7 +105,7 @@ public class TestAutomaticEquivalenceOracle extends SymbolicOracle<CharPred, Cha
                 input = new ArrayList<>();
                 for (int j = 0; j < maxLength; j++) {
                     // Choose random character to add to input
-                    int random = ThreadLocalRandom.current().nextInt(1, 400);
+                    int random = ThreadLocalRandom.current().nextInt(MIN_CHAR, MAX_CHAR);
                     Character c = CharPred.MIN_CHAR;
                     for (int k = 0; k < random; k++) {
                         c++;
@@ -130,6 +142,7 @@ public class TestAutomaticEquivalenceOracle extends SymbolicOracle<CharPred, Cha
         int state = compareTo.getInitialState();
 
         for (int i=0; i<numTests; i++) {
+//            System.out.println("Generating test "+i);
             // For each test we need to generate a word of length 15
             List<Character> input = new ArrayList<>();
             boolean initial = true;
@@ -137,21 +150,20 @@ public class TestAutomaticEquivalenceOracle extends SymbolicOracle<CharPred, Cha
                 input = new ArrayList<>();
                 for (int j = 0; j < maxLength; j++) {
                     // Choose random transition
-                    List<SFTMove<CharPred, CharFunc, Character>> moves = new ArrayList<>();
-                    moves.addAll(compareTo.getTransitionsFrom(state));
+                    List<SFTInputMove<CharPred, CharFunc, Character>> moves = new ArrayList<>();
+                    moves.addAll(compareTo.getInputMovesFrom(state));
                     int random = ThreadLocalRandom.current().nextInt(0, moves.size());
-                    SFTMove chosenTrans = moves.get(random);
+                    SFTInputMove<CharPred, CharFunc, Character> chosenTrans = moves.get(random);
+
 
                     Character c = CharPred.MIN_CHAR;
                     boolean initialChar = true;
                     // Find random character that satisfies the transition
                     // NOTE: It chooses a random character from a RANGE of the actual complete algebra!
-                    while (initialChar || !chosenTrans.hasModel(c, ba)) {
-                        int randomChar = ThreadLocalRandom.current().nextInt(1, 400);
-                        c = CharPred.MIN_CHAR;
-                        for (int k = 0; k < randomChar; k++) {
-                            c++;
-                        }
+                    // Choose random guard to use for character generation
+                    while (initialChar || c == 0) {
+                        int g = ThreadLocalRandom.current().nextInt(0, chosenTrans.guard.intervals.size());
+                        c = getRandomCharacter(chosenTrans.guard.intervals.get(g).getRight(), chosenTrans.guard.intervals.get(g).getLeft());
                         initialChar = false;
                     }
                     input.add(c);
@@ -182,23 +194,29 @@ public class TestAutomaticEquivalenceOracle extends SymbolicOracle<CharPred, Cha
         List<List<Character>> tested = new ArrayList<>();
 
         for (int i=0; i<numTests; i++) {
+//            System.out.println("Test number #"+i);
             // For each test we need to generate a word of length 15
             List<Character> input = new ArrayList<>();
             boolean initial = true;
+//            System.out.println("Entering while loop");
             while (initial || tested.contains(input)) {
                 input = new ArrayList<>();
                 // First select a random state
                 int randomState = ThreadLocalRandom.current().nextInt(0, hypothesis.stateCount());
                 // Find access sequence of this state
+//                System.out.println("Will now search for access string");
                 List<Character> accString = SFT.getAccessString(hypothesis, randomState);
+//                System.out.println("Access string: "+accString);
                 // Append the access string to the input as prefix
-//                System.out.println("Adding the access string: "+accString+" for state "+randomState);
+                if (accString == null) {
+                    continue;
+                }
                 input.addAll(accString);
 
                 int randomLength = ThreadLocalRandom.current().nextInt(minLength, maxLength);
                 for (int j=0; j<randomLength; j++) {
                     // Choose random character to add to input
-                    int random = ThreadLocalRandom.current().nextInt(1, 400);
+                    int random = ThreadLocalRandom.current().nextInt(MIN_CHAR, MAX_CHAR);
                     Character c = CharPred.MIN_CHAR;
                     for (int k = 0; k < random; k++) {
                         c++;
@@ -207,6 +225,7 @@ public class TestAutomaticEquivalenceOracle extends SymbolicOracle<CharPred, Cha
                 }
                 initial = false;
             }
+//            System.out.println("Left while loop");
             // Random input has been generated
             // Check whether output of hypothesis is the same as the output of the System Under Learning
             List<Character> hypothesisOutput = hypothesis.outputOn(input, ba);
@@ -234,7 +253,7 @@ public class TestAutomaticEquivalenceOracle extends SymbolicOracle<CharPred, Cha
             // Test random inputs for first state
             List<Character> input = new ArrayList<>();
             for (int j=0; j<maxLength; j++) {
-                int random = ThreadLocalRandom.current().nextInt(1, 400);
+                int random = ThreadLocalRandom.current().nextInt(MIN_CHAR, MAX_CHAR);
                 Character c = CharPred.MIN_CHAR;
                 for (int k = 0; k < random; k++) {
                     c++;
@@ -263,21 +282,23 @@ public class TestAutomaticEquivalenceOracle extends SymbolicOracle<CharPred, Cha
                     // We start in state i
                     List<Character> input = SFT.getAccessString(hypothesis, i);
                     // Generate an input with a length of y (=maxLength)
+                    if (input == null) {
+                        break;
+                    }
                     Character c = CharPred.MIN_CHAR;
+                    boolean first = true;
                     // Find first character which satisfies the guard of the transition leading to the current state
-                    while (c == null || !trans.hasModel(c, ba)) {
-                        int randomChar = ThreadLocalRandom.current().nextInt(1, 400);
-                        c = CharPred.MIN_CHAR;
-                        for (int k = 0; k < randomChar; k++) {
-                            c++;
-                        }
+                    while (first || c == 0) {
+                        int l = ThreadLocalRandom.current().nextInt(0, trans.guard.intervals.size());
+                        c = getRandomCharacter(trans.guard.intervals.get(l).getRight(), trans.guard.intervals.get(l).getLeft());
+                        first = false;
                     }
                     input.add(c);
                     // Generate the rest of the test case
                     for (int k=1; k<maxLength; k++) {
-                        int random = ThreadLocalRandom.current().nextInt(1, 400);
+                        int random = ThreadLocalRandom.current().nextInt(MIN_CHAR, MAX_CHAR);
                         c = CharPred.MIN_CHAR;
-                        for (int l = 0; l < random; l++) {
+                        for (int m = 0; m < random; m++) {
                             c++;
                         }
                         input.add(c);
@@ -307,21 +328,21 @@ public class TestAutomaticEquivalenceOracle extends SymbolicOracle<CharPred, Cha
                 for (int i=0; i<maxTestsPerTransition; i++) {
                     List<Character> input = new ArrayList<>();
                     // Start in the state
-                    input.addAll(getAccessString(hypothesis, state));
+                    List<Character> accString = getAccessString(hypothesis, state);
+
                     Character c = CharPred.MIN_CHAR;
+                    boolean first = true;
                     // Generate character which satisfies the guard of the transition
-                    while (c != null && !trans.hasModel(c, ba)) {
-                        int random = ThreadLocalRandom.current().nextInt(1, 400);
-                        c = CharPred.MIN_CHAR;
-                        for (int k = 0; k<random; k++) {
-                            c++;
-                        }
+                    while (first || c == 0) {
+                        int j = ThreadLocalRandom.current().nextInt(0, trans.guard.intervals.size());
+                        c = getRandomCharacter(trans.guard.intervals.get(j).getRight(), trans.guard.intervals.get(j).getLeft());
+                        first = false;
                     }
                     input.add(c);
 
                     // Generate the rest of the test case
                     for (int k=0; k<maxLength; k++) {
-                        int random = ThreadLocalRandom.current().nextInt(1, 400);
+                        int random = ThreadLocalRandom.current().nextInt(MIN_CHAR, MAX_CHAR);
                         c = CharPred.MIN_CHAR;
                         for (int l=0; l<random; l++) {
                             c++;
@@ -349,25 +370,27 @@ public class TestAutomaticEquivalenceOracle extends SymbolicOracle<CharPred, Cha
         for (int state=0; state<hypothesis.stateCount(); state++) {
             Collection<SFTInputMove<CharPred, CharFunc, Character>> transitions = hypothesis.getInputMovesFrom(state);
             for (SFTInputMove<CharPred, CharFunc, Character> trans : transitions) {
+                intervalLoop:
                 for (int i=0; i<trans.guard.intervals.size(); i++) {
                     for (int j=0; j<maxTestsPerPred; j++) {
                         List<Character> input = new ArrayList<>();
-                        input.addAll(getAccessString(hypothesis, state));
-                        Character c = CharPred.MIN_CHAR;
+                        List<Character> accString = getAccessString(hypothesis, state);
+                        if (accString == null) {
+                            // There are no transitions leading to this state so we skip this as it is unreachable
+                            break intervalLoop;
+                        }
+                        input.addAll(accString);
+                        Character c = 0;
                         // Generate character which satisfies the guard of the transition
-
-                        while (c != null && (trans.guard.intervals.get(i).getLeft() > c || trans.guard.intervals.get(i).getRight() < c)) {
-                            int random = ThreadLocalRandom.current().nextInt(1, 400);
-                            c = CharPred.MIN_CHAR;
-                            for (int k = 0; k < random; k++) {
-                                c++;
-                            }
+                        c = getRandomCharacter(trans.guard.intervals.get(i).right, trans.guard.intervals.get(i).left, MIN_CHAR, MAX_CHAR);
+                        if (c == 0) {
+                            break intervalLoop;
                         }
                         input.add(c);
 
                         // Generate the rest of the test case
                         for (int k = 0; k < maxLength; k++) {
-                            int random = ThreadLocalRandom.current().nextInt(1, 400);
+                            int random = ThreadLocalRandom.current().nextInt(MIN_CHAR, MAX_CHAR);
                             c = CharPred.MIN_CHAR;
                             for (int l = 0; l < random; l++) {
                                 c++;
@@ -394,13 +417,16 @@ public class TestAutomaticEquivalenceOracle extends SymbolicOracle<CharPred, Cha
     // Equivalence oracle that achieves predicate coverage in the hypothesis automaton
     public List<Character> stateCoverageEO(SFT<CharPred, CharFunc, Character> hypothesis) throws TimeoutException {
         for (int i=0; i<hypothesis.stateCount(); i++) {
-//            System.out.println("Testing state: "+i);
             for (int j=0; j<maxTestsPerState; j++) {
-//                System.out.println("Testing the state for the "+j+"-th time");
                 List<Character> input = new ArrayList<>();
-                input.addAll(getAccessString(hypothesis, i));
+                List<Character> accString = getAccessString(hypothesis, i);
+                if (accString == null) {
+                    break;
+                }
+                input.addAll(accString);
+
                 for (int k=0; k<maxLength; k++) {
-                    int random = ThreadLocalRandom.current().nextInt(1, 400);
+                    int random = ThreadLocalRandom.current().nextInt(MIN_CHAR, MAX_CHAR);
                     Character c = CharPred.MIN_CHAR;
                     for (int l=0; l<random; l++) {
                         c++;
@@ -409,7 +435,6 @@ public class TestAutomaticEquivalenceOracle extends SymbolicOracle<CharPred, Cha
                 }
 
                 if (!hypothesis.outputOn(input, ba).equals(o.checkMembership(input))) {
-//                    System.out.println("Found a counterexample: "+input);
                     return input;
                 }
             }
@@ -417,76 +442,7 @@ public class TestAutomaticEquivalenceOracle extends SymbolicOracle<CharPred, Cha
         return null;
     }
 
-    /**
-     * Implementation for a sanitizers that encodes/escapes HTML by transforming <, > and & into their HTML entities.
-     *
-     * @param w input for sanitizers
-     * @return input with encoded <, > and &
-     */
-    public static List<Character> encode(List<Character> w) {
-        List<Character> result = new ArrayList<>();
-        for (Character c : w) {
-            if (c == '<') {
-                result.add('&');
-                result.add('l');
-                result.add('t');
-                result.add(';');
-            } else if (c == '>') {
-                result.add('&');
-                result.add('g');
-                result.add('t');
-                result.add(';');
-            } else if (c == '&') {
-                result.add('&');
-                result.add('a');
-                result.add('m');
-                result.add('p');
-                result.add(';');
-            } else {
-                result.add(c);
-            }
-        }
-        return result;
-    }
-
-    /**
-     * Sanitizers that capitalizes a-z
-     * @param w input
-     * @return capitalized input
-     */
-    public static List<Character> capitalize(List<Character> w) {
-        String input = "";
-        for (Character c : w) {
-            input += c;
-        }
-        String result = input.toUpperCase();
-        List<Character> resultCharacters = new ArrayList<>(result.length());
-        for (int i = 0; i<result.length(); i++) {
-            resultCharacters.add(result.charAt(i));
-        }
-        return resultCharacters;
-    }
-
-    /**
-     * Sanitizer that escapes a backslash unless it is already escaped.
-     *
-     * @param w input
-     * @return input with escaped backslashes
-     */
-    public static List<Character> escape(List<Character> w) {
-        String input = "";
-        for (Character c : w) {
-            input += c;
-        }
-        String result = input.replaceAll("\\\\{1,2}",  Matcher.quoteReplacement("\\\\"));
-        List<Character> resultCharacters = new ArrayList<>(result.length());
-        for (int i=0; i<result.length(); i++) {
-            resultCharacters.add(result.charAt(i));
-        }
-        return resultCharacters;
-    }
-
-    public static void main(String[] args) throws TimeoutException {
+    public static void setLearningSettings(Scanner sc) {
         System.out.println("Which Equivalence Oracle to use?");
         System.out.println("1: Random");
         System.out.println("2: Random transition");
@@ -495,7 +451,6 @@ public class TestAutomaticEquivalenceOracle extends SymbolicOracle<CharPred, Cha
         System.out.println("5: State coverage");
         System.out.println("6: Transition coverage");
         System.out.println("7: Predicate coverage");
-        Scanner sc = new Scanner(System.in);
         EO = sc.nextInt();
         if (EO == 1 || EO == 2 || EO == 3) {
             System.out.println("Number of tests to run?");
@@ -513,61 +468,105 @@ public class TestAutomaticEquivalenceOracle extends SymbolicOracle<CharPred, Cha
             System.out.println("Number of tests per predicate?");
             maxTestsPerPred = sc.nextInt();
         }
+        System.out.println("Please specify the lower bound of the alphabet in terms of an integer");
+        MIN_CHAR = sc.nextInt();
+        System.out.println("Please specify the upper bound of the alphabet in terms of an integer");
+        MAX_CHAR = sc.nextInt();
+    }
+
+    @Override
+    protected List<Character> checkMembershipImpl(List<Character> w) {
+        numMembershipQueries++;
+        String input = "";
+        for (Character c : w) {
+            input += c;
+        }
+//        System.out.println("ASKING MO'S OUTPUT FOR: "+input);
+        try {
+            bw.write(input);
+            bw.newLine();
+            bw.flush();
+            String line = br.readLine();
+            List<Character> output = stringToCharList(line);
+//            System.out.println("RESULT OF MO: "+output);
+            return output;
+        } catch (IOException e) {
+            System.out.println();
+        }
+        // TODO: CHECK THIS PART
+        return null;
+    }
+
+
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        setLearningSettings(sc);
+
         System.out.println("Maximum number of minutes to run?");
         maxMinutes = sc.nextInt();
 
+        System.out.println("Command to use for membership oracle: ");
+        // Read newline from previous line since nextInt doesn't read the new-line character due to which nextLine will always return the empty string the first time
+        sc.nextLine();
+        String command = sc.nextLine();
+        SFT spec = null;
 
-        SFT spec = getEscapeSpec();
-//        System.out.println("====================");
-//        System.out.println(spec);
-//        System.out.println("====================");
-        long startTime = System.currentTimeMillis();
-        BinBSFTLearner ell = new BinBSFTLearner();
-        ba = new UnaryCharIntervalSolver();
-        o = new TestAutomaticEquivalenceOracle();
-        SFT<CharPred, CharFunc, Character> learned = null;
         try {
+            o = new TestMembershipOracleStream(command);
+            long startTime = System.currentTimeMillis();
+            BinBSFTLearner ell = new BinBSFTLearner();
             // Learn model
-            learned = ell.learn(o, ba, maxMinutes);
+            SFT<CharPred, CharFunc, Character> learned = ell.learn(o, ba, maxMinutes);
 
-            // Measure how long the learning took
             long endTime = System.currentTimeMillis();
             long totalTime = endTime - startTime;
             long sec = totalTime/1000;
             long min = sec/60;
             System.out.println("Total learning time: "+min+" minutes ("+sec+" seconds)");
+            System.out.println("Time spent in membership oracle: "+ (timeMembership)+" milliseconds");
+            System.out.println("Time spent in equivalence oracle: "+(timeEquivalence)+" milliseconds");
+            System.out.println("Number of membership queries asked: "+numMembershipQueries);
+            System.out.println("Number of equivalence queries asked: "+numEquivalenceQueries);
 
             // Get specfication from user
             if (learned != null) {
-                boolean equal = compare(learned, spec);
-                System.out.println("Is it equal to the specification? " + equal);
-                List<Character> witness = learned.witness1disequality(spec, ba);
-                if (!equal && witness != null) {
-                    System.out.println("Witness: " + witness);
+                if (spec != null) {
+                    startTime = System.currentTimeMillis();
+                    boolean equal = compare(learned, spec);
+                    endTime = System.currentTimeMillis();
+                    System.out.println("Is it equal to the specification? " + equal);
+                    System.out.println("How long did it take to compare models? " + ((endTime - startTime)) + " milliseconds...");
+                    List<Character> witness = learned.witness1disequality(spec, ba);
+                    if (witness != null) {
+                        System.out.println("Witness: " + witness);
 
-                    System.out.println(learned.outputOn(witness, ba));
-                    System.out.println(spec.outputOn(witness, ba));
+                        System.out.println(learned.outputOn(witness, ba));
+                        System.out.println(spec.outputOn(witness, ba));
+                    }
+                    System.out.println("Specified model:");
+                    System.out.println(spec);
                 }
-                System.out.println(spec);
+                System.out.println("Learned model:");
                 System.out.println(learned);
-                List<Character> input = new ArrayList<>();
-                input.add('\\');
-                input.add('\\');
-                System.out.println(spec.outputOn(input, ba));
-                System.out.println(learned.outputOn(input, ba));
             } else {
                 System.out.println("Timed out: Could not find a model in limited time frame");
+                System.out.println("Currently established model: ");
+                System.out.println(learned);
             }
-            //learned.createDotFile("testEscapingSlashes", "/Users/NW/Documents/Djungarian/SVPAlib/src/learning/sfa");
+            learned.createDotFile("learned", "SVPAlib/src/sftlearning/learned/");
         } catch (TimeoutException e) {
             e.printStackTrace();
         }
-    }
 
-    private static boolean compare(SFT<CharPred, CharFunc, Character> learned, SFT<CharPred, CharFunc, Character> spec) throws TimeoutException {
-        return learned.getDomain(ba).isEquivalentTo(spec.getDomain(ba), ba) &&  learned.decide1equality(spec, ba);
+        try {
+            // HAVE FINISHED LEARNING SO CLOSE MEMBERSHIP ORACLE PROCESS
+            br.close();
+            bw.close();
+            p.destroy();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
-
 
     public static void printCharList(List<Character> word) {
         String output = "";
@@ -577,98 +576,60 @@ public class TestAutomaticEquivalenceOracle extends SymbolicOracle<CharPred, Cha
         System.out.println(output);
     }
 
-
-    public static SFT<CharPred, CharFunc, Character> getEncodeSpec() throws TimeoutException {
-        UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
-        int numStates = 3;
-        Map<Integer, Set<List<Character>>> finalStatesAndTails = new HashMap<>();
-        for (int i=0; i<numStates; i++) {
-            finalStatesAndTails.put(i, new HashSet<>());
+    public static List<Character> stringToCharList(String word) {
+        List<Character> output = new ArrayList<>();
+        if (word == null || word.isEmpty()) {
+            return output;
         }
-
-        int initial = 0;
-        List<SFTMove<CharPred, CharFunc, Character>> transitions = new LinkedList<>();
-        List<CharPred> guards = new ArrayList<>();
-
-        List<CharFunc> terms = new ArrayList<>();
-        terms.add(CharOffset.IDENTITY);
-        terms.add(new CharConstant('a'));
-        terms.add(new CharConstant('m'));
-        terms.add(new CharConstant('p'));
-        terms.add(new CharConstant(';'));
-        CharPred g = new CharPred('&', '&');
-        transitions.add(new SFTInputMove<>(0, 2, g, terms));
-        transitions.add(new SFTInputMove<>(1, 2, g, terms));
-        transitions.add(new SFTInputMove<>(2, 2, g, terms));
-        guards.add(g);
-
-        terms = new ArrayList<>();
-        terms.add(new CharConstant('&'));
-        terms.add(new CharConstant('l'));
-        terms.add(new CharConstant('t'));
-        terms.add(new CharConstant(';'));
-        g = new CharPred('<', '<');
-        transitions.add(new SFTInputMove<>(0, 1, g, terms));
-        transitions.add(new SFTInputMove<>(1, 1, g, terms));
-        transitions.add(new SFTInputMove<>(2, 1, g, terms));
-        guards.add(g);
-
-        terms = new ArrayList<>();
-        terms.add(new CharConstant('&'));
-        terms.add(new CharConstant('g'));
-        terms.add(new CharConstant('t'));
-        terms.add(new CharConstant(';'));
-        g = new CharPred('>', '>');
-        transitions.add(new SFTInputMove<>(0, 1, g, terms));
-        transitions.add(new SFTInputMove<>(1, 1, g, terms));
-        transitions.add(new SFTInputMove<>(2, 1, g, terms));
-        guards.add(g);
-
-
-        CharPred largeGuard = ba.False();
-        List<CharFunc> largeTerms = new ArrayList<>();
-        for (CharPred gg : guards) {
-            largeGuard = ba.MkOr(largeGuard, gg);
+        for (int i=0; i<word.length(); i++) {
+            output.add(word.charAt(i));
         }
-        largeGuard = ba.MkNot(largeGuard);
-        largeTerms.add(CharOffset.IDENTITY);
-        transitions.add(new SFTInputMove<>(0, 0, largeGuard, largeTerms));
-        transitions.add(new SFTInputMove<>(1, 0, largeGuard, largeTerms));
-        transitions.add(new SFTInputMove<>(2, 0, largeGuard, largeTerms));
-
-        return MkSFT(transitions, initial, finalStatesAndTails, ba);
+        return output;
     }
 
-    public static SFT<CharPred, CharFunc, Character> getEscapeSpec() throws TimeoutException {
-        UnaryCharIntervalSolver ba = new UnaryCharIntervalSolver();
-        int numStates = 2;
-        Map<Integer, Set<List<Character>>> finalStatesAndTails = new HashMap<>();
-        for (int i=0; i<numStates; i++) {
-            finalStatesAndTails.put(i, new HashSet<>());
+    private static boolean compare(SFT<CharPred, CharFunc, Character> learned, SFT<CharPred, CharFunc, Character> spec) throws TimeoutException {
+        return learned.getDomain(ba).isEquivalentTo(spec.getDomain(ba), ba) &&  learned.decide1equality(spec, ba);
+    }
+
+    public static char getRandomCharacter(int upperInterval, int lowerInterval, int otherLowerInterval, int otherUpperInterval) {
+//        System.out.println("In getRandomCharacter(int, int, int, int)");
+        int lower = max(lowerInterval, otherLowerInterval);
+        int upper = min(upperInterval, otherUpperInterval);
+//        System.out.println("Lower: "+lower);
+//        System.out.println("Upper: "+upper);
+
+        if (upper < lower) {
+            return 0;
         }
 
-        int initial = 0;
-        List<SFTMove<CharPred, CharFunc, Character>> transitions = new LinkedList<>();
-        List<CharPred> guards = new ArrayList<>();
+        int randomValue = ThreadLocalRandom.current().nextInt(lower, upper + 1);
+//        System.out.println("Random value: "+randomValue);
+//        int randomValue = (int) (lower + Math.random()*(upper-lower+1));
 
-        List<CharFunc> terms = new ArrayList<>();
-        terms.add(CharOffset.IDENTITY);
-        terms.add(CharOffset.IDENTITY);
-        CharPred g = new CharPred('\\', '\\');
-        transitions.add(new SFTInputMove<>(0, 1, g, terms));
-        guards.add(g);
+        try {
+            return Character.toChars(randomValue)[0];
+        } catch (IndexOutOfBoundsException _) {
+            return 0;
+        }
+    }
 
-        CharPred largeGuard = ba.False();
-        List<CharFunc> largeTerms = new ArrayList<>();
-        largeGuard = ba.MkNot(ba.MkOr(largeGuard, g));
-        largeTerms.add(CharOffset.IDENTITY);
-        transitions.add(new SFTInputMove<>(0, 0, largeGuard, largeTerms));
-        transitions.add(new SFTInputMove<>(1, 0, largeGuard, largeTerms));
+    public static char getRandomCharacter(char maxChar, char minChar, int lowerInterval, int upperInterval) {
+        char[] characters = new char[] {maxChar, minChar};
 
-        terms = new ArrayList<>();
-        transitions.add(new SFTInputMove<>(1, 0, g, terms));
+        int maxCharInt = Character.codePointAt(characters, 0);
+        int minCharInt = Character.codePointAt(characters, 1);
+//        System.out.println("max char "+maxCharInt);
+//        System.out.println("min char "+minCharInt);
+//        System.out.println("max char "+maxChar);
+//        System.out.println("min char "+minChar);
+//        System.out.println("lowerInterval "+lowerInterval);
+//        System.out.println("upperInterval "+upperInterval);
 
-        return MkSFT(transitions, initial, finalStatesAndTails, ba);
+        return getRandomCharacter(maxCharInt, minCharInt, lowerInterval, upperInterval);
+    }
+
+    public static char getRandomCharacter(char maxChar, char minChar) {
+        return getRandomCharacter(maxChar, minChar, MIN_CHAR, MAX_CHAR);
     }
 
 }
