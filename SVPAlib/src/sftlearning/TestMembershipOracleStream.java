@@ -11,6 +11,7 @@ import transducers.sft.SFT;
 import transducers.sft.SFTInputMove;
 
 import java.io.*;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -553,7 +554,7 @@ public class TestMembershipOracleStream extends SymbolicOracle<CharPred, CharFun
                 System.out.println("Currently established model: ");
                 System.out.println(learned);
             }
-            learned.createDotFile("learned", "SVPAlib/src/sftlearning/learned/");
+            learned.createDotFile("learned"+ LocalDateTime.now().toString(), "SVPAlib/src/sftlearning/learned/");
         } catch (TimeoutException e) {
             try {
                 if (br != null) {
