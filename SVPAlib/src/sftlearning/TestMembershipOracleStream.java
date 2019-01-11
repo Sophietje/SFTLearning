@@ -51,6 +51,7 @@ public class TestMembershipOracleStream extends SymbolicOracle<CharPred, CharFun
 
     public TestMembershipOracleStream(String command) {
         sc = new Scanner(System.in);
+        this.o = this;
         this.command = command;
         String[] cmd = this.command.split(" ");
         pb = new ProcessBuilder(cmd);
@@ -63,7 +64,6 @@ public class TestMembershipOracleStream extends SymbolicOracle<CharPred, CharFun
             e.printStackTrace();
         }
     }
-
 
     @Override
     protected List<Character> checkEquivalenceImpl(SFT<CharPred, CharFunc, Character> compareTo) throws TimeoutException {

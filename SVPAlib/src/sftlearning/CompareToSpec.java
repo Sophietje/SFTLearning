@@ -31,7 +31,6 @@ public class CompareToSpec {
             SFT spec = ReadSpecification.read(specPath);
 
             System.out.println("Command to use for membership oracle: ");
-            sc.nextLine();
             String command = sc.nextLine();
 
             // Get and set settings for learning a model
