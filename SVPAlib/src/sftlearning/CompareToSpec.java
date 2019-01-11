@@ -35,7 +35,7 @@ public class CompareToSpec {
             String command = sc.nextLine();
 
             // Get and set settings for learning a model
-            TestAutomaticOracles oracles = new TestAutomaticOracles(command);
+            TestMembershipOracleStream oracles = new TestMembershipOracleStream(command);
             oracles.setLearningSettings(sc);
 
             System.out.println("Maximum number of minutes to run?");
