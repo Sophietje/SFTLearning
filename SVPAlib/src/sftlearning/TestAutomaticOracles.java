@@ -17,7 +17,6 @@ import static java.lang.Integer.max;
 import static java.lang.Integer.min;
 import java.util.*;
 
-import static sftlearning.TestAutomaticEquivalenceOracle.encode;
 import static transducers.sft.SFT.MkSFT;
 import static transducers.sft.SFT.getAccessString;
 
@@ -559,7 +558,7 @@ public class TestAutomaticOracles extends SymbolicOracle<CharPred, CharFunc, Cha
                 System.out.println("Currently established model: ");
                 System.out.println(learned);
             }
-            learned.createDotFile("learned", "/Users/NW/Documents/Djungarian/SVPAlib/src/sftlearning/learned/");
+            learned.createDotFile("learned", "SVPAlib/src/sftlearning/learned/");
         } catch (TimeoutException e) {
             e.printStackTrace();
         }
