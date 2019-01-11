@@ -38,13 +38,11 @@ Note that this program may need to be compiled beforehand, depending on the prog
 We recommend trying to execute the command beforehand from the command line and using the *__full path__* to reference a specific program.
 Note that any libraries, languages or compilers that are used by the sanitizer should be installed on the computer on which SFTLearning is run.
 
-Here are some examples of commands (all the programs mentioned below can be found in [here](https://github.com/Sophietje/SFTLearning/tree/master/Sanitizers/src)):
-- ```./escapeHTML```
-- ```java EscapeHTML```
-- ```node escapeHTML.js```
-- ```php escapeHTML.php```
-- ```python escapeHTML.py```
-- ```ruby escapeHTML.rb```
+Here are some examples of commands (all the programs mentioned below can be found in [here](https://github.com/Sophietje/SFTLearning/tree/master/Sanitizers)):
+- ```node	Sanitizers/encode/heEncodeStreams.js```
+- ```php Sanitizers/src/filterSanitizeEmailStreams.php```
+- ```python	Sanitizers/src/replaceLTStreams.py```
+- ```ruby Sanitizers/encode/htmlEntitiesEncodeStreams.rb```
 
 
 ## Equivalence Oracle
