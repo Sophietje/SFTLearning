@@ -9,6 +9,24 @@ These algorithms can ask a sanitizer two types of questions: a membership query 
 This research has been done for my Master's Thesis (Computer Science, University of Twente) which is titled "Reasoning about the Correctness of Sanitizers".
 
 
+## Running the program
+If you want to **learn and compare** a model to its specification, then execute the class [CompareToSpec](https://github.com/Sophietje/SFTLearning/blob/master/SVPAlib/src/sftlearning/CompareToSpec.java).
+The program will prompt the user for any necessary information via the standard input.
+
+If you only want to **learn** a model, then execute the class [TestMembershipOracleStream](https://github.com/Sophietje/SFTLearning/blob/master/SVPAlib/src/sftlearning/TestMembershipOracleStream.java). 
+The learned model will be stored in *SVPAlib/src/sftlearning/learned/*.
+
+If you want to **analyze a model**, for example check for idempotency, then call the desired methods in [SpecificationChecking](https://github.com/Sophietje/SFTLearning/blob/master/SVPAlib/src/sftlearning/SpecificationChecking.java).
+
+When learning a model, the program will prompt the user for some settings regarding the equivalence oracle. If you are unsure which settings would be acceptable, try the following settings: 
+- Predicate coverage (7)
+- 3000 tests per predicate
+- lower bound of the alphabet is 32
+- upper bound of the alphabet is 126 
+- a maximum of 30 minutes to run. 
+
+This will derive a model for the Basic Latin Alphabet, if you want to derive a model for a larger alphabet, increase the upper bound. These integers correspond to the number of the HTML code of a character. This means that 32 (HTML-code: \&#32;) corresponds to " " (whitespace) and 126 (HTML-code: \&#126;) corresponds to "~".
+
 ## Membership Oracle
 The membership oracle is used to pose membership queries. These queries give input to some sanitizer and then observe the output of the sanitizer. 
 To be able to pose membership queries, we require a _**command**_ from the user.
@@ -77,12 +95,3 @@ XX0 [color=white, label=""]XX0 -> 0
 0 -> 0 [label="[\u0000-\b\u000b\u000e-\u001f!-\-/-\uffff]/x+0"]
 }
 ```
-
-
-
-## Running the program
-To derive a model from a sanitizer, execute the class [TestAutomaticOracles.java](https://github.com/Sophietje/SFTLearning/blob/master/SVPAlib/src/sftlearning/TestAutomaticOracles.java).
-This program will prompt the user for any necessary information via the standard input.
-Make sure to adapt the path in this file (at the end of the main method) so that the learned model is stored in a DOT file.
-If you want to check specifications, then call the desired methods in [SpecificationChecking.java](https://github.com/Sophietje/SFTLearning/blob/master/SVPAlib/src/sftlearning/SpecificationChecking.java).
-If you want to learn a model **and** check a specification, then execute the class [CompareToSpec](https://github.com/Sophietje/SFTLearning/blob/master/SVPAlib/src/sftlearning/CompareToSpec.java).
