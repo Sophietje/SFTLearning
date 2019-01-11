@@ -9,7 +9,6 @@ import theory.characters.CharPred;
 import theory.intervals.UnaryCharIntervalSolver;
 import transducers.sft.SFT;
 import transducers.sft.SFTInputMove;
-import transducers.sft.SFTMove;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -17,7 +16,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Scanner;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.regex.Matcher;
 
 import static java.lang.Integer.max;
 import static java.lang.Integer.min;
@@ -476,6 +474,7 @@ public class TestMembershipOracleStream extends SymbolicOracle<CharPred, CharFun
 
     @Override
     protected List<Character> checkMembershipImpl(List<Character> w) {
+        long start = System.currentTimeMillis();
         numMembershipQueries++;
         String input = "";
         for (Character c : w) {
@@ -489,6 +488,7 @@ public class TestMembershipOracleStream extends SymbolicOracle<CharPred, CharFun
             String line = br.readLine();
             List<Character> output = stringToCharList(line);
 //            System.out.println("RESULT OF MO: "+output);
+            timeMembership += (System.currentTimeMillis() - start);
             return output;
         } catch (IOException e) {
             System.out.println();
@@ -555,6 +555,19 @@ public class TestMembershipOracleStream extends SymbolicOracle<CharPred, CharFun
             }
             learned.createDotFile("learned", "SVPAlib/src/sftlearning/learned/");
         } catch (TimeoutException e) {
+            try {
+                if (br != null) {
+                   br.close();
+                }
+                if (bw != null) {
+                    bw.close();
+                }
+                if (p != null) {
+                    p.destroy();
+                }
+            } catch (IOException e1) {
+                    e1.printStackTrace();
+                }
             e.printStackTrace();
         }
 
