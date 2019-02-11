@@ -484,15 +484,18 @@ public class TestMembershipOracleStream extends SymbolicOracle<CharPred, CharFun
 //        System.out.println("ASKING MO'S OUTPUT FOR: "+input);
         try {
             bw.write(input);
-            bw.newLine();
+            bw.write("\n");
+//            System.out.println("Writing input "+input);
             bw.flush();
+//            System.out.println("Flushed");
             String line = br.readLine();
+//            System.out.println("Got output "+line);
             List<Character> output = stringToCharList(line);
 //            System.out.println("RESULT OF MO: "+output);
             timeMembership += (System.currentTimeMillis() - start);
             return output;
         } catch (IOException e) {
-            System.out.println();
+            System.err.println("Encountered IOException");
         }
         // TODO: CHECK THIS PART
         return null;

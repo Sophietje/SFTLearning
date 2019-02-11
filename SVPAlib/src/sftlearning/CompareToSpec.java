@@ -57,7 +57,9 @@ public class CompareToSpec {
             long min = sec/60;
             System.out.println("Total learning time: "+min+" minutes ("+sec+" seconds)");
             System.out.println("Time spent in membership oracle: "+ (oracles.timeMembership)+" milliseconds");
+            System.out.println("Number of membership queries: "+oracles.getNumMembership());
             System.out.println("Time spent in equivalence oracle: "+(oracles.timeEquivalence)+" milliseconds");
+            System.out.println("Number of equivalence queries: "+oracles.getNumEquivalence());
 
             // Compare model and specification
             if (learned != null) {
