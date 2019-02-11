@@ -31,9 +31,9 @@ This will derive a model for the Basic Latin Alphabet, if you want to derive a m
 The membership oracle is used to pose membership queries. These queries give input to some sanitizer and then observe the output of the sanitizer. 
 To be able to pose membership queries, we require a _**command**_ from the user.
 This command may contain options/flags.
-The program should call the sanitizer and pass it the commandline argument which is the input to the sanitizer.
-The input to the sanitizer will be appended to your command by the algorithm.
+The program should call the sanitizer for each input that is written to the standard input.
 If the command is run, it should print the output of the program to the _**standard output**_
+The program should continuously wait for input on the standard input and print the corresponding output when it is presented with an input.
 Note that this program may need to be compiled beforehand, depending on the programming language which was used.
 We recommend trying to execute the command beforehand from the command line and using the *__full path__* to reference a specific program.
 Note that any libraries, languages or compilers that are used by the sanitizer should be installed on the computer on which SFTLearning is run.
