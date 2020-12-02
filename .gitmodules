@@ -16,3 +16,45 @@
 [submodule "Sanitizers/node_modules/he"]
 	path = Sanitizers/node_modules/he
 	url = https://github.com/mathiasbynens/he
+[submodule "Sanitizers/sanitize/Caja-HTML-Sanitizer"]
+    path = Sanitizers/sanitize/Caja-HTML-Sanitizer
+    url = https://github.com/theSmaw/Caja-HTML-Sanitizer
+[submodule "Sanitizers/sanitize/DOMPurify"]
+    path = Sanitizers/sanitize/DOMPurify
+    url = https://github.com/cure53/DOMPurify
+[submodule "Sanitizers/sanitize/HtmlSanitizer"]
+    path = Sanitizers/sanitize/HtmlSanitizer
+    url = https://github.com/mganss/HtmlSanitizer
+[submodule "Sanitizers/sanitize/JSanity"]
+    path = Sanitizers/sanitize/JSanity
+    url = https://github.com/Microsoft/JSanity
+[submodule "Sanitizers/sanitize/Sanitize.js"]
+    path = Sanitizers/sanitize/Sanitize.js
+    url = https://github.com/gbirke/Sanitize.js
+[submodule "Sanitizers/sanitize/bluemonday"]
+    path = Sanitizers/sanitize/bluemonday
+    url = https://github.com/microcosm-cc/bluemonday
+[submodule "Sanitizers/sanitize/govalidator"]
+    path = Sanitizers/sanitize/govalidator
+    url = https://github.com/asaskevich/govalidator
+[submodule "Sanitizers/sanitize/insane"]
+    path = Sanitizers/sanitize/insane
+    url = https://github.com/bevacqua/insane
+[submodule "Sanitizers/sanitize/java-html-sanitizer"]
+    path = Sanitizers/sanitize/java-html-sanitizer
+    url = https://github.com/OWASP/java-html-sanitizer
+[submodule "Sanitizers/sanitize/js-xss"]
+    path = Sanitizers/sanitize/js-xss
+    url = https://github.com/leizongmin/js-xss
+[submodule "Sanitizers/sanitize/loofah"]
+    path = Sanitizers/sanitize/loofah
+    url = https://github.com/flavorjones/loofah
+[submodule "Sanitizers/sanitize/mutations"]
+    path = Sanitizers/sanitize/mutations
+    url = https://github.com/cypriss/mutations
+[submodule "Sanitizers/sanitize/sanitize"]
+    path = Sanitizers/sanitize/sanitize
+    url = https://github.com/rgrove/sanitize
+[submodule "Sanitizers/sanitize/sanitize-html"]
+    path = Sanitizers/sanitize/sanitize-html
+    url = https://github.com/apostrophecms/sanitize-html
